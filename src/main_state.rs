@@ -1,12 +1,15 @@
+mod sound_state;
+mod ui;
+
 use std::time::Duration;
 
-use egui::{Slider, TopBottomPanel};
+use egui::TopBottomPanel;
 use glam::Vec2;
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
 	sound::{
-		streaming::{StreamingSoundData, StreamingSoundHandle, StreamingSoundSettings},
-		FromFileError, PlaybackPosition, PlaybackState,
+		streaming::{StreamingSoundData, StreamingSoundSettings},
+		PlaybackPosition, PlaybackState,
 	},
 	tween::Tween,
 };
@@ -16,6 +19,8 @@ use micro::{
 };
 
 use crate::{Chapter, Visualizer};
+
+use self::sound_state::SoundState;
 
 const FINISHED_SEEK_DETECTION_THRESHOLD: f64 = 0.1;
 
@@ -106,34 +111,8 @@ impl State<anyhow::Error> for MainState {
 		TopBottomPanel::bottom("main_menu")
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
 				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
-					let play_pause_button_text = if self.sound_state.playing() {
-						"Pause"
-					} else {
-						"Play"
-					};
-					if ui.button(play_pause_button_text).clicked() {
-						if self.sound_state.playing() {
-							self.pause()?;
-						} else {
-							self.play_or_resume()?;
-						}
-					}
-					let mut position = self.sound_state.current_position();
-					if ui
-						.add(
-							Slider::new(&mut position, 0.0..=self.duration.as_secs_f64())
-								.custom_formatter(|position, _| {
-									format!(
-										"{} / {}",
-										format_position(position),
-										format_position(self.duration.as_secs_f64())
-									)
-								}),
-						)
-						.drag_released()
-					{
-						self.seek(position)?;
-					};
+					self.render_play_pause_button(ui)?;
+					self.render_seekbar(ui)?;
 					Ok(())
 				})
 				.inner
@@ -191,42 +170,4 @@ impl State<anyhow::Error> for MainState {
 		);
 		Ok(())
 	}
-}
-
-#[allow(clippy::large_enum_variant)]
-enum SoundState {
-	Stopped {
-		data: Option<StreamingSoundData<FromFileError>>,
-		start_position: f64,
-	},
-	PlayingOrPaused {
-		sound: StreamingSoundHandle<FromFileError>,
-		in_progress_seek: Option<f64>,
-	},
-}
-
-impl SoundState {
-	fn playing(&self) -> bool {
-		match self {
-			SoundState::Stopped { .. } => false,
-			SoundState::PlayingOrPaused { sound, .. } => sound.state() == PlaybackState::Playing,
-		}
-	}
-
-	fn current_position(&self) -> f64 {
-		match self {
-			SoundState::Stopped { start_position, .. } => *start_position,
-			SoundState::PlayingOrPaused {
-				sound,
-				in_progress_seek,
-			} => in_progress_seek.unwrap_or_else(|| sound.position()),
-		}
-	}
-}
-
-fn format_position(position: f64) -> String {
-	let seconds = position % 60.0;
-	let minutes = (position / 60.0).floor() % 60.0;
-	let hours = (position / (60.0 * 60.0)).floor();
-	format!("{}:{:0>2}:{:0>5.2}", hours, minutes, seconds)
 }
