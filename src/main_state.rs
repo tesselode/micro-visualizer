@@ -122,7 +122,13 @@ impl State<anyhow::Error> for MainState {
 					if ui
 						.add(
 							Slider::new(&mut position, 0.0..=self.duration.as_secs_f64())
-								.custom_formatter(|position, _| format_position(position)),
+								.custom_formatter(|position, _| {
+									format!(
+										"{} / {}",
+										format_position(position),
+										format_position(self.duration.as_secs_f64())
+									)
+								}),
 						)
 						.drag_released()
 					{
