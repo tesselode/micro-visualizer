@@ -14,7 +14,8 @@ use kira::{
 };
 use micro::{
 	graphics::{Canvas, CanvasSettings, ColorConstants, DrawParams},
-	Context, State,
+	input::Scancode,
+	Context, Event, State,
 };
 use palette::LinSrgba;
 
@@ -89,6 +90,15 @@ impl MainState {
 		Ok(())
 	}
 
+	fn toggle_playback(&mut self) -> anyhow::Result<()> {
+		if self.sound_state.playing() {
+			self.pause()?;
+		} else {
+			self.play_or_resume()?;
+		}
+		Ok(())
+	}
+
 	fn seek(&mut self, position: f64) -> anyhow::Result<()> {
 		match &mut self.sound_state {
 			SoundState::Stopped { start_position, .. } => {
@@ -117,11 +127,68 @@ impl MainState {
 			.find(|(_, chapter)| chapter.start_frame <= self.current_frame())
 			.map(|(index, _)| index)
 	}
+
+	fn go_to_chapter(&mut self, chapter_index: usize) -> anyhow::Result<()> {
+		let chapter = &self.chapters[chapter_index];
+		let chapter_start_position =
+			chapter.start_frame as f64 / self.visualizer.frame_rate() as f64;
+		self.seek(chapter_start_position)?;
+		Ok(())
+	}
+
+	fn go_to_next_chapter(&mut self) -> anyhow::Result<()> {
+		if self.chapters.is_empty() {
+			return Ok(());
+		}
+		let current_chapter_index = self.current_chapter_index().expect("no current chapter");
+		if current_chapter_index >= self.chapters.len() - 1 {
+			return Ok(());
+		}
+		self.go_to_chapter(current_chapter_index + 1)?;
+		Ok(())
+	}
+
+	fn go_to_previous_chapter(&mut self) -> anyhow::Result<()> {
+		if self.chapters.is_empty() {
+			return Ok(());
+		}
+		let current_chapter_index = self.current_chapter_index().expect("no current chapter");
+		if current_chapter_index == 0 {
+			return Ok(());
+		}
+		self.go_to_chapter(current_chapter_index - 1)?;
+		Ok(())
+	}
 }
 
 impl State<anyhow::Error> for MainState {
 	fn ui(&mut self, _ctx: &mut Context, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
 		self.render_main_menu(egui_ctx)?;
+		Ok(())
+	}
+
+	fn event(&mut self, _ctx: &mut Context, event: Event) -> Result<(), anyhow::Error> {
+		if let Event::KeyPressed {
+			key: Scancode::Space,
+			..
+		} = event
+		{
+			self.toggle_playback()?;
+		}
+		if let Event::KeyPressed {
+			key: Scancode::Comma,
+			..
+		} = event
+		{
+			self.go_to_previous_chapter()?;
+		}
+		if let Event::KeyPressed {
+			key: Scancode::Period,
+			..
+		} = event
+		{
+			self.go_to_next_chapter()?;
+		}
 		Ok(())
 	}
 

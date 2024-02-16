@@ -10,6 +10,12 @@ impl MainState {
 					self.render_play_pause_button(ui)?;
 					self.render_seekbar(ui)?;
 					self.render_chapter_combo_box(ui)?;
+					if ui.button("<<").clicked() {
+						self.go_to_previous_chapter()?;
+					}
+					if ui.button(">>").clicked() {
+						self.go_to_next_chapter()?;
+					}
 					Ok(())
 				})
 				.inner
@@ -25,11 +31,7 @@ impl MainState {
 			"Play"
 		};
 		if ui.button(play_pause_button_text).clicked() {
-			if self.sound_state.playing() {
-				self.pause()?;
-			} else {
-				self.play_or_resume()?;
-			}
+			self.toggle_playback()?;
 		};
 		Ok(())
 	}
@@ -65,10 +67,7 @@ impl MainState {
 				&self.chapters[i].name
 			});
 		if response.changed() {
-			let selected_chapter = &self.chapters[selected];
-			let chapter_start_position =
-				selected_chapter.start_frame as f64 / self.visualizer.frame_rate() as f64;
-			self.seek(chapter_start_position)?;
+			self.go_to_chapter(selected)?;
 		}
 		Ok(())
 	}
