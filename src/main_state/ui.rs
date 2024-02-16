@@ -1,9 +1,24 @@
-use egui::Slider;
+use egui::{ComboBox, Slider, TopBottomPanel, Ui};
 
 use super::MainState;
 
 impl MainState {
-	pub fn render_play_pause_button(&mut self, ui: &mut egui::Ui) -> Result<(), anyhow::Error> {
+	pub fn render_main_menu(&mut self, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
+		TopBottomPanel::bottom("main_menu")
+			.show(egui_ctx, |ui| -> anyhow::Result<()> {
+				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
+					self.render_play_pause_button(ui)?;
+					self.render_seekbar(ui)?;
+					self.render_chapter_combo_box(ui)?;
+					Ok(())
+				})
+				.inner
+			})
+			.inner?;
+		Ok(())
+	}
+
+	fn render_play_pause_button(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
 		let play_pause_button_text = if self.sound_state.playing() {
 			"Pause"
 		} else {
@@ -19,7 +34,7 @@ impl MainState {
 		Ok(())
 	}
 
-	pub fn render_seekbar(&mut self, ui: &mut egui::Ui) -> Result<(), anyhow::Error> {
+	fn render_seekbar(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
 		let mut position = self.sound_state.current_position();
 		if ui
 			.add(
@@ -37,6 +52,24 @@ impl MainState {
 		{
 			self.seek(position)?;
 		};
+		Ok(())
+	}
+
+	fn render_chapter_combo_box(&mut self, ui: &mut Ui) -> anyhow::Result<()> {
+		if self.chapters.is_empty() {
+			return Ok(());
+		}
+		let mut selected = self.current_chapter_index().expect("no current chapter");
+		let response =
+			ComboBox::new("chapter", "").show_index(ui, &mut selected, self.chapters.len(), |i| {
+				&self.chapters[i].name
+			});
+		if response.changed() {
+			let selected_chapter = &self.chapters[selected];
+			let chapter_start_position =
+				selected_chapter.start_frame as f64 / self.visualizer.frame_rate() as f64;
+			self.seek(chapter_start_position)?;
+		}
 		Ok(())
 	}
 }

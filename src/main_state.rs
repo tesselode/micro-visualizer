@@ -3,7 +3,6 @@ mod ui;
 
 use std::time::Duration;
 
-use egui::TopBottomPanel;
 use glam::Vec2;
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
@@ -14,9 +13,10 @@ use kira::{
 	tween::Tween,
 };
 use micro::{
-	graphics::{Canvas, CanvasSettings, DrawParams},
+	graphics::{Canvas, CanvasSettings, ColorConstants, DrawParams},
 	Context, State,
 };
+use palette::LinSrgba;
 
 use crate::{Chapter, Visualizer};
 
@@ -104,20 +104,24 @@ impl MainState {
 		}
 		Ok(())
 	}
+
+	fn current_frame(&self) -> u64 {
+		(self.sound_state.current_position() * self.visualizer.frame_rate() as f64).ceil() as u64
+	}
+
+	fn current_chapter_index(&self) -> Option<usize> {
+		self.chapters
+			.iter()
+			.enumerate()
+			.rev()
+			.find(|(_, chapter)| chapter.start_frame <= self.current_frame())
+			.map(|(index, _)| index)
+	}
 }
 
 impl State<anyhow::Error> for MainState {
 	fn ui(&mut self, _ctx: &mut Context, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
-		TopBottomPanel::bottom("main_menu")
-			.show(egui_ctx, |ui| -> anyhow::Result<()> {
-				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
-					self.render_play_pause_button(ui)?;
-					self.render_seekbar(ui)?;
-					Ok(())
-				})
-				.inner
-			})
-			.inner?;
+		self.render_main_menu(egui_ctx)?;
 		Ok(())
 	}
 
@@ -148,11 +152,10 @@ impl State<anyhow::Error> for MainState {
 	}
 
 	fn draw(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
+		ctx.clear(LinSrgba::BLACK);
+		let current_frame = self.current_frame();
 		if self.sound_state.current_position() != self.previous_position {
 			let ctx = &mut self.canvas.render_to(ctx);
-			let current_frame = (self.sound_state.current_position()
-				* self.visualizer.frame_rate() as f64)
-				.ceil() as u64;
 			self.visualizer.draw(ctx, current_frame)?;
 			self.previous_position = self.sound_state.current_position();
 		}
