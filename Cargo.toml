@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.79"
 egui = "0.26.2"
 glam = "0.25.0"
-kira = "0.8.7"
+kira = { git = "https://github.com/tesselode/kira", rev = "418a4b2" }
 micro = { git = "https://github.com/tesselode/micro", rev = "f2c04df" }
 palette = "0.7.4"
 

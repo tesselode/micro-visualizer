@@ -648,9 +648,8 @@ dependencies = [
 
 [[package]]
 name = "kira"
-version = "0.8.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8968f1eda49cdf4f6406fd5ffe590c3ca2778a1b0e50b5684974b138a99dfb2f"
+version = "0.8.6"
+source = "git+https://github.com/tesselode/kira?rev=418a4b2#418a4b2570e69b9b87cc18ec40f801fe1a47453c"
 dependencies = [
  "atomic-arena",
  "cpal",

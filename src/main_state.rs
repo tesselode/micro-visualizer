@@ -4,7 +4,10 @@ use egui::{Slider, TopBottomPanel};
 use glam::Vec2;
 use kira::{
 	manager::{AudioManager, AudioManagerSettings},
-	sound::static_sound::{StaticSoundData, StaticSoundHandle, StaticSoundSettings},
+	sound::{
+		streaming::{StreamingSoundData, StreamingSoundHandle, StreamingSoundSettings},
+		FromFileError, PlaybackPosition, PlaybackState,
+	},
 	tween::Tween,
 };
 use micro::{
@@ -17,10 +20,9 @@ use crate::{Chapter, Visualizer};
 pub struct MainState {
 	visualizer: Box<dyn Visualizer>,
 	audio_manager: AudioManager,
-	sound_data: StaticSoundData,
-	num_frames: u64,
-	playback_state: PlaybackState,
-	current_frame: u64,
+	sound_state: SoundState,
+	duration: Duration,
+	previous_position: f64,
 	chapters: Vec<Chapter>,
 	canvas: Canvas,
 }
@@ -28,10 +30,11 @@ pub struct MainState {
 impl MainState {
 	pub fn new(ctx: &mut Context, visualizer: Box<dyn Visualizer>) -> anyhow::Result<Self> {
 		let audio_manager = AudioManager::new(AudioManagerSettings::default())?;
-		let sound_data =
-			StaticSoundData::from_file(visualizer.audio_path(), StaticSoundSettings::default())?;
-		let num_frames =
-			(sound_data.duration().as_secs_f64() * visualizer.frame_rate() as f64).ceil() as u64;
+		let sound_data = StreamingSoundData::from_file(
+			visualizer.audio_path(),
+			StreamingSoundSettings::default(),
+		)?;
+		let duration = sound_data.duration();
 		let chapters = visualizer.chapters();
 		let canvas = Canvas::new(
 			ctx,
@@ -41,48 +44,52 @@ impl MainState {
 		Ok(MainState {
 			visualizer,
 			audio_manager,
-			sound_data,
-			num_frames,
-			playback_state: PlaybackState::Paused,
-			current_frame: 0,
+			sound_state: SoundState::Stopped {
+				data: Some(sound_data),
+				start_position: 0.0,
+			},
+			duration,
+			previous_position: 0.0,
 			chapters,
 			canvas,
 		})
 	}
 
-	fn play(&mut self) -> anyhow::Result<()> {
-		let start_position = self.current_frame as f64 / self.visualizer.frame_rate() as f64;
-		self.playback_state = PlaybackState::Playing {
-			sound: self.audio_manager.play(
-				self.sound_data
-					.with_modified_settings(|s| s.playback_region(start_position..)),
-			)?,
-			time_since_last_frame: Duration::ZERO,
-		};
+	fn play_or_resume(&mut self) -> anyhow::Result<()> {
+		match &mut self.sound_state {
+			SoundState::Stopped {
+				data,
+				start_position,
+			} => {
+				let mut data = data.take().unwrap();
+				data.settings.start_position = PlaybackPosition::Seconds(*start_position);
+				self.sound_state = SoundState::PlayingOrPaused {
+					sound: self.audio_manager.play(data)?,
+				};
+			}
+			SoundState::PlayingOrPaused { sound } => {
+				sound.resume(Tween::default())?;
+			}
+		}
 		Ok(())
 	}
 
 	fn pause(&mut self) -> anyhow::Result<()> {
-		if let PlaybackState::Playing { sound, .. } = &mut self.playback_state {
-			sound.stop(Tween::default())?;
+		if let SoundState::PlayingOrPaused { sound } = &mut self.sound_state {
+			sound.pause(Tween::default())?;
 		}
-		self.playback_state = PlaybackState::Paused;
 		Ok(())
 	}
 
-	fn toggle_playback(&mut self) -> anyhow::Result<()> {
-		match &self.playback_state {
-			PlaybackState::Playing { .. } => self.pause(),
-			PlaybackState::Paused => self.play(),
+	fn seek(&mut self, position: f64) -> anyhow::Result<()> {
+		match &mut self.sound_state {
+			SoundState::Stopped { start_position, .. } => {
+				*start_position = position;
+			}
+			SoundState::PlayingOrPaused { sound } => {
+				sound.seek_to(position)?;
+			}
 		}
-	}
-
-	fn seek(&mut self, frame: u64) -> Result<(), anyhow::Error> {
-		self.current_frame = frame;
-		if let PlaybackState::Playing { sound, .. } = &mut self.playback_state {
-			sound.stop(Tween::default())?;
-		}
-		self.play()?;
 		Ok(())
 	}
 }
@@ -92,19 +99,27 @@ impl State<anyhow::Error> for MainState {
 		TopBottomPanel::bottom("main_menu")
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
 				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
-					let play_pause_button_text = match &self.playback_state {
-						PlaybackState::Playing { .. } => "Pause",
-						PlaybackState::Paused => "Play",
+					let play_pause_button_text = if self.sound_state.playing() {
+						"Pause"
+					} else {
+						"Play"
 					};
 					if ui.button(play_pause_button_text).clicked() {
-						self.toggle_playback()?;
+						if self.sound_state.playing() {
+							self.pause()?;
+						} else {
+							self.play_or_resume()?;
+						}
 					}
-					let mut current_frame = self.current_frame;
+					let mut position = self.sound_state.current_position();
 					if ui
-						.add(Slider::new(&mut current_frame, 0..=self.num_frames - 1))
+						.add(
+							Slider::new(&mut position, 0.0..=self.duration.as_secs_f64())
+								.custom_formatter(|position, _| format_position(position)),
+						)
 						.drag_released()
 					{
-						self.seek(current_frame)?;
+						self.seek(position)?;
 					};
 					Ok(())
 				})
@@ -114,30 +129,29 @@ impl State<anyhow::Error> for MainState {
 		Ok(())
 	}
 
-	fn update(&mut self, _ctx: &mut Context, delta_time: Duration) -> Result<(), anyhow::Error> {
-		if let PlaybackState::Playing {
-			sound,
-			time_since_last_frame,
-		} = &mut self.playback_state
-		{
-			if sound.state() == kira::sound::PlaybackState::Stopped {
-				self.playback_state = PlaybackState::Paused;
-			} else {
-				*time_since_last_frame += delta_time;
-				let frame_time = Duration::from_secs_f64(1.0 / self.visualizer.frame_rate() as f64);
-				while *time_since_last_frame >= frame_time {
-					*time_since_last_frame -= frame_time;
-					self.current_frame = (self.current_frame + 1).min(self.num_frames - 1);
-				}
+	fn update(&mut self, _ctx: &mut Context, _delta_time: Duration) -> Result<(), anyhow::Error> {
+		if let SoundState::PlayingOrPaused { sound } = &self.sound_state {
+			if sound.state() == PlaybackState::Stopped {
+				self.sound_state = SoundState::Stopped {
+					data: Some(StreamingSoundData::from_file(
+						self.visualizer.audio_path(),
+						StreamingSoundSettings::default(),
+					)?),
+					start_position: 0.0,
+				};
 			}
 		}
 		Ok(())
 	}
 
 	fn draw(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
-		{
+		if self.sound_state.current_position() != self.previous_position {
 			let ctx = &mut self.canvas.render_to(ctx);
-			self.visualizer.draw(ctx, self.current_frame)?;
+			let current_frame = (self.sound_state.current_position()
+				* self.visualizer.frame_rate() as f64)
+				.ceil() as u64;
+			self.visualizer.draw(ctx, current_frame)?;
+			self.previous_position = self.sound_state.current_position();
 		}
 		let max_horizontal_scale =
 			ctx.window_size().x as f32 / self.visualizer.video_resolution().x as f32;
@@ -155,10 +169,36 @@ impl State<anyhow::Error> for MainState {
 	}
 }
 
-enum PlaybackState {
-	Playing {
-		sound: StaticSoundHandle,
-		time_since_last_frame: Duration,
+#[allow(clippy::large_enum_variant)]
+enum SoundState {
+	Stopped {
+		data: Option<StreamingSoundData<FromFileError>>,
+		start_position: f64,
 	},
-	Paused,
+	PlayingOrPaused {
+		sound: StreamingSoundHandle<FromFileError>,
+	},
+}
+
+impl SoundState {
+	fn playing(&self) -> bool {
+		match self {
+			SoundState::Stopped { .. } => false,
+			SoundState::PlayingOrPaused { sound } => sound.state() == PlaybackState::Playing,
+		}
+	}
+
+	fn current_position(&self) -> f64 {
+		match self {
+			SoundState::Stopped { start_position, .. } => *start_position,
+			SoundState::PlayingOrPaused { sound } => sound.position(),
+		}
+	}
+}
+
+fn format_position(position: f64) -> String {
+	let seconds = position % 60.0;
+	let minutes = (position / 60.0).floor() % 60.0;
+	let hours = (position / (60.0 * 60.0)).floor();
+	format!("{}:{:0>2}:{:0>5.2}", hours, minutes, seconds)
 }
