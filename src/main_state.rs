@@ -17,6 +17,8 @@ use micro::{
 
 use crate::{Chapter, Visualizer};
 
+const FINISHED_SEEK_DETECTION_THRESHOLD: f64 = 0.1;
+
 pub struct MainState {
 	visualizer: Box<dyn Visualizer>,
 	audio_manager: AudioManager,
@@ -65,9 +67,10 @@ impl MainState {
 				data.settings.start_position = PlaybackPosition::Seconds(*start_position);
 				self.sound_state = SoundState::PlayingOrPaused {
 					sound: self.audio_manager.play(data)?,
+					in_progress_seek: None,
 				};
 			}
-			SoundState::PlayingOrPaused { sound } => {
+			SoundState::PlayingOrPaused { sound, .. } => {
 				sound.resume(Tween::default())?;
 			}
 		}
@@ -75,7 +78,7 @@ impl MainState {
 	}
 
 	fn pause(&mut self) -> anyhow::Result<()> {
-		if let SoundState::PlayingOrPaused { sound } = &mut self.sound_state {
+		if let SoundState::PlayingOrPaused { sound, .. } = &mut self.sound_state {
 			sound.pause(Tween::default())?;
 		}
 		Ok(())
@@ -86,8 +89,12 @@ impl MainState {
 			SoundState::Stopped { start_position, .. } => {
 				*start_position = position;
 			}
-			SoundState::PlayingOrPaused { sound } => {
+			SoundState::PlayingOrPaused {
+				sound,
+				in_progress_seek,
+			} => {
 				sound.seek_to(position)?;
+				*in_progress_seek = Some(position);
 			}
 		}
 		Ok(())
@@ -130,7 +137,18 @@ impl State<anyhow::Error> for MainState {
 	}
 
 	fn update(&mut self, _ctx: &mut Context, _delta_time: Duration) -> Result<(), anyhow::Error> {
-		if let SoundState::PlayingOrPaused { sound } = &self.sound_state {
+		if let SoundState::PlayingOrPaused {
+			sound,
+			in_progress_seek,
+		} = &mut self.sound_state
+		{
+			if let Some(in_progress_seek_destination) = in_progress_seek {
+				if (sound.position() - *in_progress_seek_destination).abs()
+					<= FINISHED_SEEK_DETECTION_THRESHOLD
+				{
+					*in_progress_seek = None;
+				}
+			}
 			if sound.state() == PlaybackState::Stopped {
 				self.sound_state = SoundState::Stopped {
 					data: Some(StreamingSoundData::from_file(
@@ -177,6 +195,7 @@ enum SoundState {
 	},
 	PlayingOrPaused {
 		sound: StreamingSoundHandle<FromFileError>,
+		in_progress_seek: Option<f64>,
 	},
 }
 
@@ -184,14 +203,17 @@ impl SoundState {
 	fn playing(&self) -> bool {
 		match self {
 			SoundState::Stopped { .. } => false,
-			SoundState::PlayingOrPaused { sound } => sound.state() == PlaybackState::Playing,
+			SoundState::PlayingOrPaused { sound, .. } => sound.state() == PlaybackState::Playing,
 		}
 	}
 
 	fn current_position(&self) -> f64 {
 		match self {
 			SoundState::Stopped { start_position, .. } => *start_position,
-			SoundState::PlayingOrPaused { sound } => sound.position(),
+			SoundState::PlayingOrPaused {
+				sound,
+				in_progress_seek,
+			} => in_progress_seek.unwrap_or_else(|| sound.position()),
 		}
 	}
 }
