@@ -1,10 +1,8 @@
+mod chapters;
+mod rendering;
 mod ui;
 
-use std::{
-	io::Write,
-	process::{Child, Command, Stdio},
-	time::Duration,
-};
+use std::{io::Write, process::Child, time::Duration};
 
 use glam::Vec2;
 use kira::{
@@ -16,12 +14,11 @@ use kira::{
 	tween::Tween,
 };
 use micro::{
-	graphics::{Canvas, CanvasSettings, ColorConstants, DrawParams, SwapInterval},
+	graphics::{Canvas, CanvasSettings, ColorConstants, DrawParams},
 	input::Scancode,
 	Context, Event, State,
 };
 use palette::LinSrgba;
-use rfd::FileDialog;
 
 use crate::{Chapter, Visualizer};
 
@@ -77,12 +74,16 @@ impl MainState {
 		})
 	}
 
-	fn frame_to_time(&self, frame: u64) -> f64 {
-		frame as f64 / self.visualizer.frame_rate() as f64
+	fn current_frame(&self) -> u64 {
+		(self.current_position() * self.visualizer.frame_rate() as f64).ceil() as u64
 	}
 
 	fn num_frames(&self) -> u64 {
 		(self.duration.as_secs_f64() * self.visualizer.frame_rate() as f64).ceil() as u64
+	}
+
+	fn frame_to_time(&self, frame: u64) -> f64 {
+		frame as f64 / self.visualizer.frame_rate() as f64
 	}
 
 	fn playing(&self) -> bool {
@@ -155,133 +156,6 @@ impl MainState {
 			}
 			Mode::Rendering { .. } => unreachable!("not supported in rendering mode"),
 		}
-		Ok(())
-	}
-
-	fn current_frame(&self) -> u64 {
-		(self.current_position() * self.visualizer.frame_rate() as f64).ceil() as u64
-	}
-
-	fn current_chapter_index(&self) -> Option<usize> {
-		self.chapters
-			.iter()
-			.enumerate()
-			.rev()
-			.find(|(_, chapter)| chapter.start_frame <= self.current_frame())
-			.map(|(index, _)| index)
-	}
-
-	fn chapter_end_frame(&self, chapter_index: usize) -> u64 {
-		self.chapters
-			.get(chapter_index + 1)
-			.map(|chapter| chapter.start_frame - 1)
-			.unwrap_or(self.num_frames() - 1)
-	}
-
-	fn go_to_chapter(&mut self, chapter_index: usize) -> anyhow::Result<()> {
-		let chapter = &self.chapters[chapter_index];
-		let chapter_start_position = self.frame_to_time(chapter.start_frame);
-		self.seek(chapter_start_position)?;
-		Ok(())
-	}
-
-	fn go_to_next_chapter(&mut self) -> anyhow::Result<()> {
-		if self.chapters.is_empty() {
-			return Ok(());
-		}
-		let current_chapter_index = self.current_chapter_index().expect("no current chapter");
-		if current_chapter_index >= self.chapters.len() - 1 {
-			return Ok(());
-		}
-		self.go_to_chapter(current_chapter_index + 1)?;
-		Ok(())
-	}
-
-	fn go_to_previous_chapter(&mut self) -> anyhow::Result<()> {
-		if self.chapters.is_empty() {
-			return Ok(());
-		}
-		let current_chapter_index = self.current_chapter_index().expect("no current chapter");
-		if current_chapter_index == 0 {
-			return Ok(());
-		}
-		self.go_to_chapter(current_chapter_index - 1)?;
-		Ok(())
-	}
-
-	fn render(&mut self, ctx: &mut Context) -> anyhow::Result<()> {
-		let Some(video_path) = FileDialog::new()
-			.set_directory(std::env::current_exe().unwrap())
-			.add_filter("mp4 video", &["mp4"])
-			.save_file()
-		else {
-			return Ok(());
-		};
-		let (start_frame, end_frame) = if !self.chapters.is_empty() {
-			let start_frame =
-				self.chapters[self.rendering_settings.start_chapter_index].start_frame;
-			let end_frame = self.chapter_end_frame(self.rendering_settings.end_chapter_index);
-			(start_frame, end_frame)
-		} else {
-			(0, self.num_frames() - 1)
-		};
-		let start_time = self.frame_to_time(start_frame);
-		let ffmpeg_process = Command::new("ffmpeg")
-			.stdin(Stdio::piped())
-			.arg("-y")
-			.arg("-f")
-			.arg("rawvideo")
-			.arg("-vcodec")
-			.arg("rawvideo")
-			.arg("-s")
-			.arg(&format!(
-				"{}x{}",
-				self.visualizer.video_resolution().x,
-				self.visualizer.video_resolution().y
-			))
-			.arg("-pix_fmt")
-			.arg("rgba")
-			.arg("-r")
-			.arg(self.visualizer.frame_rate().to_string())
-			.arg("-i")
-			.arg("-")
-			.arg("-ss")
-			.arg(&format!("{}s", start_time))
-			.arg("-i")
-			.arg(self.visualizer.audio_path())
-			.arg("-b:a")
-			.arg("320k")
-			.arg("-c:v")
-			.arg("libx264")
-			.arg("-r")
-			.arg(self.visualizer.frame_rate().to_string())
-			.arg("-shortest")
-			.arg(video_path)
-			.spawn()?;
-		let canvas_read_buffer = vec![
-			0;
-			(self.visualizer.video_resolution().x * self.visualizer.video_resolution().y * 4)
-				as usize
-		];
-		self.mode = Mode::Rendering {
-			end_frame,
-			current_frame: start_frame,
-			canvas_read_buffer,
-			ffmpeg_process,
-		};
-		ctx.set_swap_interval(SwapInterval::Immediate)?;
-		Ok(())
-	}
-
-	fn stop_rendering(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
-		self.mode = Mode::Stopped {
-			data: Some(StreamingSoundData::from_file(
-				self.visualizer.audio_path(),
-				StreamingSoundSettings::default(),
-			)?),
-			start_position: 0.0,
-		};
-		ctx.set_swap_interval(SwapInterval::VSync)?;
 		Ok(())
 	}
 }
