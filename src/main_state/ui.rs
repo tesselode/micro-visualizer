@@ -1,6 +1,8 @@
 use egui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui};
 use micro::Context;
 
+use crate::Seconds;
+
 use super::{MainState, Mode};
 
 impl MainState {
@@ -39,18 +41,18 @@ impl MainState {
 			.open(&mut self.show_rendering_window)
 			.show(egui_ctx, |ui| {
 				let mut rendering_started = false;
-				if !self.chapters.is_empty() {
+				if let Some(chapters) = &self.chapters {
 					ComboBox::new("start_chapter_index", "Start Chapter Index").show_index(
 						ui,
 						&mut self.rendering_settings.start_chapter_index,
-						self.chapters.len(),
-						|i| &self.chapters[i].name,
+						chapters.len(),
+						|i| &chapters[i].name,
 					);
 					ComboBox::new("end_chapter_index", "End Chapter Index").show_index(
 						ui,
 						&mut self.rendering_settings.end_chapter_index,
-						self.chapters.len(),
-						|i| &self.chapters[i].name,
+						chapters.len(),
+						|i| &chapters[i].name,
 					);
 				}
 				if ui.button("Render").clicked() {
@@ -79,40 +81,42 @@ impl MainState {
 	}
 
 	fn render_seekbar(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
-		let mut position = self.current_position();
+		let mut position = self.current_position().0;
 		let slider_response = &ui.add(
-			Slider::new(&mut position, 0.0..=self.duration.as_secs_f64()).custom_formatter(
-				|position, _| {
-					format!(
-						"{} / {}",
-						format_position(position),
-						format_position(self.duration.as_secs_f64())
-					)
-				},
-			),
+			Slider::new(&mut position, 0.0..=self.duration.0).custom_formatter(|position, _| {
+				format!(
+					"{} / {}",
+					format_position(position),
+					format_position(self.duration.0)
+				)
+			}),
 		);
 		if slider_response.drag_released() && !matches!(self.mode, Mode::Rendering { .. }) {
-			self.seek(position)?;
+			self.seek(Seconds(position))?;
 		};
 		Ok(())
 	}
 
 	fn render_chapter_combo_box(&mut self, ui: &mut Ui) -> anyhow::Result<()> {
-		if self.chapters.is_empty() {
+		let Some(chapters) = &self.chapters else {
 			return Ok(());
-		}
+		};
+		let current_frame = self
+			.current_position()
+			.to_frames(self.visualizer.frame_rate());
+		let current_chapter_index = chapters
+			.index_at_frame(current_frame)
+			.expect("no current chapter");
 		if matches!(self.mode, Mode::Rendering { .. }) {
-			let chapter = &self.chapters[self.current_chapter_index().expect("no current chapter")];
-			ui.label(&chapter.name);
-			return Ok(());
-		}
-		let mut selected = self.current_chapter_index().expect("no current chapter");
-		let response =
-			ComboBox::new("chapter", "").show_index(ui, &mut selected, self.chapters.len(), |i| {
-				&self.chapters[i].name
-			});
-		if response.changed() {
-			self.go_to_chapter(selected)?;
+			ui.label(&chapters[current_chapter_index].name);
+		} else {
+			let mut selected = current_chapter_index;
+			let response =
+				ComboBox::new("chapter", "")
+					.show_index(ui, &mut selected, chapters.len(), |i| &chapters[i].name);
+			if response.changed() {
+				self.go_to_chapter(selected)?;
+			}
 		}
 		Ok(())
 	}

@@ -1,4 +1,8 @@
+mod chapters;
 mod main_state;
+mod time;
+
+pub use time::*;
 
 use std::path::PathBuf;
 
@@ -9,7 +13,7 @@ use micro::{Context, ContextSettings, WindowMode};
 pub trait Visualizer: 'static {
 	fn audio_path(&self) -> PathBuf;
 
-	fn frame_rate(&self) -> u32 {
+	fn frame_rate(&self) -> u64 {
 		60
 	}
 
@@ -21,13 +25,13 @@ pub trait Visualizer: 'static {
 		vec![]
 	}
 
-	fn draw(&mut self, ctx: &mut Context, frame_number: u64) -> anyhow::Result<()>;
+	fn draw(&mut self, ctx: &mut Context, frame: Frames) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Chapter {
 	pub name: String,
-	pub start_frame: u64,
+	pub start_frame: Frames,
 }
 
 pub fn run<T: Visualizer>(

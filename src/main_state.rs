@@ -20,17 +20,21 @@ use micro::{
 };
 use palette::LinSrgba;
 
-use crate::{Chapter, Visualizer};
+use crate::{
+	chapters::Chapters,
+	time::{Frames, Seconds},
+	Visualizer,
+};
 
-const FINISHED_SEEK_DETECTION_THRESHOLD: f64 = 0.1;
+const FINISHED_SEEK_DETECTION_THRESHOLD: Seconds = Seconds(0.1);
 
 pub struct MainState {
 	visualizer: Box<dyn Visualizer>,
 	audio_manager: AudioManager,
 	mode: Mode,
-	duration: Duration,
-	previous_position: f64,
-	chapters: Vec<Chapter>,
+	duration: Seconds,
+	previous_position: Seconds,
+	chapters: Option<Chapters>,
 	canvas: Canvas,
 	rendering_settings: RenderingSettings,
 	show_rendering_window: bool,
@@ -43,47 +47,40 @@ impl MainState {
 			visualizer.audio_path(),
 			StreamingSoundSettings::default(),
 		)?;
-		let duration = sound_data.duration();
+		let duration = Seconds(sound_data.duration().as_secs_f64());
 		let chapters = visualizer.chapters();
+		let chapters = if visualizer.chapters().is_empty() {
+			None
+		} else {
+			Some(Chapters(chapters))
+		};
 		let canvas = Canvas::new(
 			ctx,
 			visualizer.video_resolution(),
 			CanvasSettings::default(),
 		);
-		let rendering_settings = if chapters.is_empty() {
-			RenderingSettings::default()
-		} else {
+		let rendering_settings = if let Some(chapters) = &chapters {
 			RenderingSettings {
 				start_chapter_index: 0,
 				end_chapter_index: chapters.len() - 1,
 			}
+		} else {
+			RenderingSettings::default()
 		};
 		Ok(MainState {
 			visualizer,
 			audio_manager,
 			mode: Mode::Stopped {
 				data: Some(sound_data),
-				start_position: 0.0,
+				start_position: Seconds(0.0),
 			},
 			duration,
-			previous_position: 0.0,
+			previous_position: Seconds(0.0),
 			chapters,
 			canvas,
 			rendering_settings,
 			show_rendering_window: false,
 		})
-	}
-
-	fn current_frame(&self) -> u64 {
-		(self.current_position() * self.visualizer.frame_rate() as f64).ceil() as u64
-	}
-
-	fn num_frames(&self) -> u64 {
-		(self.duration.as_secs_f64() * self.visualizer.frame_rate() as f64).ceil() as u64
-	}
-
-	fn frame_to_time(&self, frame: u64) -> f64 {
-		frame as f64 / self.visualizer.frame_rate() as f64
 	}
 
 	fn playing(&self) -> bool {
@@ -94,14 +91,16 @@ impl MainState {
 		}
 	}
 
-	fn current_position(&self) -> f64 {
+	fn current_position(&self) -> Seconds {
 		match &self.mode {
 			Mode::Stopped { start_position, .. } => *start_position,
 			Mode::PlayingOrPaused {
 				sound,
 				in_progress_seek,
-			} => in_progress_seek.unwrap_or_else(|| sound.position()),
-			Mode::Rendering { current_frame, .. } => self.frame_to_time(*current_frame),
+			} => in_progress_seek.unwrap_or_else(|| Seconds(sound.position())),
+			Mode::Rendering { current_frame, .. } => {
+				current_frame.to_seconds(self.visualizer.frame_rate())
+			}
 		}
 	}
 
@@ -112,7 +111,7 @@ impl MainState {
 				start_position,
 			} => {
 				let mut data = data.take().unwrap();
-				data.settings.start_position = PlaybackPosition::Seconds(*start_position);
+				data.settings.start_position = PlaybackPosition::Seconds(start_position.0);
 				self.mode = Mode::PlayingOrPaused {
 					sound: self.audio_manager.play(data)?,
 					in_progress_seek: None,
@@ -142,7 +141,7 @@ impl MainState {
 		Ok(())
 	}
 
-	fn seek(&mut self, position: f64) -> anyhow::Result<()> {
+	fn seek(&mut self, position: Seconds) -> anyhow::Result<()> {
 		match &mut self.mode {
 			Mode::Stopped { start_position, .. } => {
 				*start_position = position;
@@ -151,7 +150,7 @@ impl MainState {
 				sound,
 				in_progress_seek,
 			} => {
-				sound.seek_to(position)?;
+				sound.seek_to(position.0)?;
 				*in_progress_seek = Some(position);
 			}
 			Mode::Rendering { .. } => unreachable!("not supported in rendering mode"),
@@ -199,7 +198,7 @@ impl State<anyhow::Error> for MainState {
 		} = &mut self.mode
 		{
 			if let Some(in_progress_seek_destination) = in_progress_seek {
-				if (sound.position() - *in_progress_seek_destination).abs()
+				if (Seconds(sound.position()) - *in_progress_seek_destination).abs()
 					<= FINISHED_SEEK_DETECTION_THRESHOLD
 				{
 					*in_progress_seek = None;
@@ -211,7 +210,7 @@ impl State<anyhow::Error> for MainState {
 						self.visualizer.audio_path(),
 						StreamingSoundSettings::default(),
 					)?),
-					start_position: 0.0,
+					start_position: Seconds(0.0),
 				};
 			}
 		}
@@ -220,7 +219,9 @@ impl State<anyhow::Error> for MainState {
 
 	fn draw(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
 		ctx.clear(LinSrgba::BLACK);
-		let current_frame = self.current_frame();
+		let current_frame = self
+			.current_position()
+			.to_frames(self.visualizer.frame_rate());
 		if self.current_position() != self.previous_position {
 			let ctx = &mut self.canvas.render_to(ctx);
 			self.visualizer.draw(ctx, current_frame)?;
@@ -251,7 +252,7 @@ impl State<anyhow::Error> for MainState {
 			if write_result.is_err() {
 				self.stop_rendering(ctx)?;
 			} else {
-				*current_frame += 1;
+				*current_frame += Frames(1);
 				if *current_frame > *end_frame {
 					self.stop_rendering(ctx)?;
 				}
@@ -265,15 +266,15 @@ impl State<anyhow::Error> for MainState {
 enum Mode {
 	Stopped {
 		data: Option<StreamingSoundData<FromFileError>>,
-		start_position: f64,
+		start_position: Seconds,
 	},
 	PlayingOrPaused {
 		sound: StreamingSoundHandle<FromFileError>,
-		in_progress_seek: Option<f64>,
+		in_progress_seek: Option<Seconds>,
 	},
 	Rendering {
-		end_frame: u64,
-		current_frame: u64,
+		end_frame: Frames,
+		current_frame: Frames,
 		canvas_read_buffer: Vec<u8>,
 		ffmpeg_process: Child,
 	},

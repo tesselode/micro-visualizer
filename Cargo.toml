@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.79"
+derive_more = "0.99.17"
 egui = "0.26.2"
 glam = "0.25.0"
 kira = { git = "https://github.com/tesselode/kira", rev = "418a4b2" }
