@@ -82,14 +82,31 @@ impl MainState {
 
 	fn render_seekbar(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
 		let mut position = self.current_position().0;
+		let (start_time, end_time) = if let Some(chapters) = &self.chapters {
+			let frame_rate = self.visualizer.frame_rate();
+			let current_chapter_index = chapters
+				.index_at_frame(self.current_position().to_frames(frame_rate))
+				.expect("no current chapter");
+			let current_chapter = &chapters[current_chapter_index];
+			let start_time = current_chapter.start_frame.to_seconds(frame_rate);
+			let end_time = chapters
+				.end_frame(current_chapter_index)
+				.map(|frame| frame.to_seconds(frame_rate))
+				.unwrap_or(self.duration);
+			(start_time, end_time)
+		} else {
+			(Seconds(0.0), self.duration)
+		};
 		let slider_response = &ui.add(
-			Slider::new(&mut position, 0.0..=self.duration.0).custom_formatter(|position, _| {
-				format!(
-					"{} / {}",
-					format_position(position),
-					format_position(self.duration.0)
-				)
-			}),
+			Slider::new(&mut position, start_time.0..=end_time.0).custom_formatter(
+				|position, _| {
+					format!(
+						"{} / {}",
+						format_position(position),
+						format_position(self.duration.0)
+					)
+				},
+			),
 		);
 		if slider_response.drag_released() && !matches!(self.mode, Mode::Rendering { .. }) {
 			self.seek(Seconds(position))?;
