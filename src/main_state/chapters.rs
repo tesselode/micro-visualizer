@@ -1,17 +1,17 @@
-use crate::Seconds;
+use std::time::Duration;
+
+use crate::time::frame_to_seconds;
 
 use super::MainState;
 
-const BEGINNING_OF_CHAPTER_THRESHOLD: Seconds = Seconds(2.0);
+const BEGINNING_OF_CHAPTER_THRESHOLD: Duration = Duration::from_secs(2);
 
 impl MainState {
 	pub fn go_to_chapter(&mut self, chapter_index: usize) -> anyhow::Result<()> {
 		let Some(chapters) = &self.chapters else {
 			return Ok(());
 		};
-		let chapter = &chapters[chapter_index];
-		let chapter_start_position = chapter.start_frame.to_seconds(self.visualizer.frame_rate());
-		self.seek(chapter_start_position)?;
+		self.seek(chapters[chapter_index].start_frame)?;
 		Ok(())
 	}
 
@@ -20,10 +20,7 @@ impl MainState {
 			return Ok(());
 		};
 		let current_chapter_index = chapters
-			.index_at_frame(
-				self.current_position()
-					.to_frames(self.visualizer.frame_rate()),
-			)
+			.index_at_frame(self.current_frame())
 			.expect("no current chapter");
 		if current_chapter_index >= chapters.len() - 1 {
 			return Ok(());
@@ -37,20 +34,18 @@ impl MainState {
 			return Ok(());
 		};
 		let current_chapter_index = chapters
-			.index_at_frame(
-				self.current_position()
-					.to_frames(self.visualizer.frame_rate()),
-			)
+			.index_at_frame(self.current_frame())
 			.expect("no current chapter");
 		let current_chapter = &chapters[current_chapter_index];
-		let current_chapter_start_time = current_chapter
-			.start_frame
-			.to_seconds(self.visualizer.frame_rate());
-		let time_since_start_of_chapter = self.current_position() - current_chapter_start_time;
+		let frames_since_start_of_chapter = self.current_frame() - current_chapter.start_frame;
+		let time_since_start_of_chapter = Duration::from_secs_f64(frame_to_seconds(
+			frames_since_start_of_chapter,
+			self.visualizer.frame_rate(),
+		));
 		if current_chapter_index == 0
 			|| time_since_start_of_chapter > BEGINNING_OF_CHAPTER_THRESHOLD
 		{
-			self.seek(current_chapter_start_time)?;
+			self.seek(current_chapter.start_frame)?;
 		} else {
 			self.go_to_chapter(current_chapter_index - 1)?;
 		}

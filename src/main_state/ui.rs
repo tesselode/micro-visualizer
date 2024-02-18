@@ -1,7 +1,7 @@
 use egui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui};
 use micro::Context;
 
-use crate::Seconds;
+use crate::time::frame_to_seconds;
 
 use super::{MainState, Mode};
 
@@ -81,35 +81,34 @@ impl MainState {
 	}
 
 	fn render_seekbar(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
-		let mut position = self.current_position().0;
-		let (start_time, end_time) = if let Some(chapters) = &self.chapters {
-			let frame_rate = self.visualizer.frame_rate();
+		let mut frame = self.current_frame();
+		let (start_frame, end_frame) = if let Some(chapters) = &self.chapters {
 			let current_chapter_index = chapters
-				.index_at_frame(self.current_position().to_frames(frame_rate))
+				.index_at_frame(self.current_frame())
 				.expect("no current chapter");
 			let current_chapter = &chapters[current_chapter_index];
-			let start_time = current_chapter.start_frame.to_seconds(frame_rate);
-			let end_time = chapters
+			let start_frame = current_chapter.start_frame;
+			let end_frame = chapters
 				.end_frame(current_chapter_index)
-				.map(|frame| frame.to_seconds(frame_rate))
-				.unwrap_or(self.duration);
-			(start_time, end_time)
+				.unwrap_or(self.num_frames);
+			(start_frame, end_frame)
 		} else {
-			(Seconds(0.0), self.duration)
+			(0, self.num_frames)
 		};
 		let slider_response = &ui.add(
-			Slider::new(&mut position, start_time.0..=end_time.0).custom_formatter(
-				|position, _| {
-					format!(
-						"{} / {}",
-						format_position(position),
-						format_position(self.duration.0)
-					)
-				},
-			),
+			Slider::new(&mut frame, start_frame..=end_frame).custom_formatter(|frame, _| {
+				format!(
+					"{} / {}",
+					format_time(frame_to_seconds(frame as u64, self.visualizer.frame_rate())),
+					format_time(frame_to_seconds(
+						self.num_frames,
+						self.visualizer.frame_rate()
+					))
+				)
+			}),
 		);
 		if slider_response.drag_released() && !matches!(self.mode, Mode::Rendering { .. }) {
-			self.seek(Seconds(position))?;
+			self.seek(frame)?;
 		};
 		Ok(())
 	}
@@ -118,9 +117,7 @@ impl MainState {
 		let Some(chapters) = &self.chapters else {
 			return Ok(());
 		};
-		let current_frame = self
-			.current_position()
-			.to_frames(self.visualizer.frame_rate());
+		let current_frame = self.current_frame();
 		let current_chapter_index = chapters
 			.index_at_frame(current_frame)
 			.expect("no current chapter");
@@ -139,9 +136,9 @@ impl MainState {
 	}
 }
 
-fn format_position(position: f64) -> String {
-	let seconds = position % 60.0;
-	let minutes = (position / 60.0).floor() % 60.0;
-	let hours = (position / (60.0 * 60.0)).floor();
+fn format_time(time: f64) -> String {
+	let seconds = time % 60.0;
+	let minutes = (time / 60.0).floor() % 60.0;
+	let hours = (time / (60.0 * 60.0)).floor();
 	format!("{}:{:0>2}:{:0>5.2}", hours, minutes, seconds)
 }

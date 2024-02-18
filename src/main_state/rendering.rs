@@ -4,7 +4,7 @@ use kira::sound::streaming::{StreamingSoundData, StreamingSoundSettings};
 use micro::{graphics::SwapInterval, Context};
 use rfd::FileDialog;
 
-use crate::{Frames, Seconds};
+use crate::time::frame_to_seconds;
 
 use super::{MainState, Mode};
 
@@ -21,15 +21,12 @@ impl MainState {
 			let start_frame = chapters[self.rendering_settings.start_chapter_index].start_frame;
 			let end_frame = chapters
 				.end_frame(self.rendering_settings.end_chapter_index)
-				.unwrap_or_else(|| self.duration.to_frames(self.visualizer.frame_rate()));
+				.unwrap_or(self.num_frames);
 			(start_frame, end_frame)
 		} else {
-			(
-				Frames(0),
-				self.duration.to_frames(self.visualizer.frame_rate()),
-			)
+			(0, self.num_frames)
 		};
-		let start_time = start_frame.to_seconds(self.visualizer.frame_rate());
+		let start_time = frame_to_seconds(start_frame, self.visualizer.frame_rate());
 		let ffmpeg_process = Command::new("ffmpeg")
 			.stdin(Stdio::piped())
 			.arg("-y")
@@ -50,7 +47,7 @@ impl MainState {
 			.arg("-i")
 			.arg("-")
 			.arg("-ss")
-			.arg(&format!("{}s", start_time.0))
+			.arg(&format!("{}s", start_time))
 			.arg("-i")
 			.arg(self.visualizer.audio_path())
 			.arg("-b:a")
@@ -83,7 +80,7 @@ impl MainState {
 				self.visualizer.audio_path(),
 				StreamingSoundSettings::default(),
 			)?),
-			start_position: Seconds(0.0),
+			start_frame: 0,
 		};
 		ctx.set_swap_interval(SwapInterval::VSync)?;
 		Ok(())

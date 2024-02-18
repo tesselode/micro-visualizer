@@ -1,6 +1,6 @@
 use derive_more::{Index, IndexMut, IntoIterator};
 
-use crate::{time::Frames, Chapter};
+use crate::Chapter;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Index, IndexMut, IntoIterator)]
 pub struct Chapters(pub Vec<Chapter>);
@@ -18,7 +18,7 @@ impl Chapters {
 		self.0.len()
 	}
 
-	pub fn index_at_frame(&self, frame: Frames) -> Option<usize> {
+	pub fn index_at_frame(&self, frame: u64) -> Option<usize> {
 		self.0
 			.iter()
 			.enumerate()
@@ -27,15 +27,15 @@ impl Chapters {
 			.map(|(i, _)| i)
 	}
 
-	pub fn at_frame(&self, frame: Frames) -> Option<&Chapter> {
+	pub fn at_frame(&self, frame: u64) -> Option<&Chapter> {
 		self.0
 			.iter()
 			.rev()
 			.find(|chapter| chapter.start_frame <= frame)
 	}
 
-	pub fn end_frame(&self, chapter_index: usize) -> Option<Frames> {
+	pub fn end_frame(&self, chapter_index: usize) -> Option<u64> {
 		self.get(chapter_index + 1)
-			.map(|chapter| chapter.start_frame - Frames(1))
+			.map(|chapter| chapter.start_frame - 1)
 	}
 }
