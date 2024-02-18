@@ -157,6 +157,10 @@ impl MainState {
 		}
 		Ok(())
 	}
+
+	fn seek_by(&mut self, delta: Seconds) -> anyhow::Result<()> {
+		self.seek((self.current_position() + delta).clamp(Seconds(0.0), self.duration))
+	}
 }
 
 impl State<anyhow::Error> for MainState {
@@ -167,26 +171,15 @@ impl State<anyhow::Error> for MainState {
 	}
 
 	fn event(&mut self, _ctx: &mut Context, event: Event) -> Result<(), anyhow::Error> {
-		if let Event::KeyPressed {
-			key: Scancode::Space,
-			..
-		} = event
-		{
-			self.toggle_playback()?;
-		}
-		if let Event::KeyPressed {
-			key: Scancode::Comma,
-			..
-		} = event
-		{
-			self.go_to_previous_chapter()?;
-		}
-		if let Event::KeyPressed {
-			key: Scancode::Period,
-			..
-		} = event
-		{
-			self.go_to_next_chapter()?;
+		if let Event::KeyPressed { key, .. } = event {
+			match key {
+				Scancode::Space => self.toggle_playback()?,
+				Scancode::Left => self.seek_by(Seconds(-10.0))?,
+				Scancode::Right => self.seek_by(Seconds(10.0))?,
+				Scancode::Comma => self.go_to_previous_chapter()?,
+				Scancode::Period => self.go_to_next_chapter()?,
+				_ => {}
+			}
 		}
 		Ok(())
 	}

@@ -57,4 +57,8 @@ impl Seconds {
 	pub fn abs(self) -> Seconds {
 		Seconds(self.0.abs())
 	}
+
+	pub fn clamp(self, min: Self, max: Self) -> Self {
+		Self(self.0.clamp(min.0, max.0))
+	}
 }
