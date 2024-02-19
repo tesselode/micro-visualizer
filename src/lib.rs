@@ -85,12 +85,7 @@ pub trait Visualizer: 'static {
 		Ok(())
 	}
 
-	fn draw(
-		&mut self,
-		ctx: &mut Context,
-		vis_info: VisualizerInfo,
-		frame_number: u64,
-	) -> anyhow::Result<()>;
+	fn draw(&mut self, ctx: &mut Context, vis_info: VisualizerInfo) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

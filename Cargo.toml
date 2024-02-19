@@ -13,7 +13,7 @@ glam = "0.25.0"
 kira = { git = "https://github.com/tesselode/kira", rev = "7e8d7ea" }
 micro = { git = "https://github.com/tesselode/micro", rev = "1680cda" }
 palette = "0.7.4"
-rfd = "0.13.0"
+rfd = "0.14.0"
 
 [features]
 sdl2_bundled = ["micro/sdl2_bundled"]

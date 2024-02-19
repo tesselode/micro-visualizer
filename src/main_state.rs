@@ -241,7 +241,7 @@ impl State<anyhow::Error> for MainState {
 		let current_frame = self.current_frame();
 		if current_frame != self.previous_frame {
 			let ctx = &mut self.canvas.render_to(ctx);
-			self.visualizer.draw(ctx, self.vis_info(), current_frame)?;
+			self.visualizer.draw(ctx, self.vis_info())?;
 			self.previous_frame = current_frame;
 		}
 		let max_horizontal_scale =

@@ -32,16 +32,11 @@ impl Visualizer for TestVisualizer {
 		Ok(())
 	}
 
-	fn draw(
-		&mut self,
-		ctx: &mut Context,
-		_vis_info: VisualizerInfo,
-		frame_number: u64,
-	) -> anyhow::Result<()> {
+	fn draw(&mut self, ctx: &mut Context, vis_info: VisualizerInfo) -> anyhow::Result<()> {
 		ctx.clear(LinSrgba::BLACK);
 		Mesh::rectangle(
 			ctx,
-			Rect::from_xywh(50.0 + frame_number as f32, 50.0, 100.0, 150.0),
+			Rect::from_xywh(50.0 + vis_info.current_frame as f32, 50.0, 100.0, 150.0),
 		)
 		.draw(ctx, DrawParams::new());
 		Ok(())
