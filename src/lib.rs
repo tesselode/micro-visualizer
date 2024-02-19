@@ -2,12 +2,13 @@ mod chapters;
 mod main_state;
 mod time;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use glam::UVec2;
 use main_state::MainState;
 use micro::{Context, ContextSettings, WindowMode};
 
+#[allow(unused_variables)]
 pub trait Visualizer: 'static {
 	fn audio_path(&self) -> PathBuf;
 
@@ -21,6 +22,10 @@ pub trait Visualizer: 'static {
 
 	fn chapters(&self) -> Vec<Chapter> {
 		vec![]
+	}
+
+	fn update(&mut self, ctx: &mut Context, delta_time: Duration) -> anyhow::Result<()> {
+		Ok(())
 	}
 
 	fn draw(&mut self, ctx: &mut Context, frame_number: u64) -> anyhow::Result<()>;

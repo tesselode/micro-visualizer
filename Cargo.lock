@@ -940,7 +940,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 [[package]]
 name = "micro"
 version = "0.1.0"
-source = "git+https://github.com/tesselode/micro?rev=d8dc33a#d8dc33a9abc7af4e8184786387a173dc3a7fd528"
+source = "git+https://github.com/tesselode/micro?rev=1680cda#1680cdae990fc4f5ef33b8ed925c2827dead83c9"
 dependencies = [
  "backtrace",
  "bytemuck",

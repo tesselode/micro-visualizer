@@ -191,7 +191,7 @@ impl State<anyhow::Error> for MainState {
 		Ok(())
 	}
 
-	fn update(&mut self, _ctx: &mut Context, _delta_time: Duration) -> Result<(), anyhow::Error> {
+	fn update(&mut self, ctx: &mut Context, delta_time: Duration) -> Result<(), anyhow::Error> {
 		if let Mode::PlayingOrPaused {
 			sound,
 			in_progress_seek,
@@ -220,6 +220,9 @@ impl State<anyhow::Error> for MainState {
 				};
 			}
 		}
+
+		self.visualizer.update(ctx, delta_time)?;
+
 		Ok(())
 	}
 
