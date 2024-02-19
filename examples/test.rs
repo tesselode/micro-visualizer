@@ -5,7 +5,7 @@ use micro::{
 	math::Rect,
 	Context,
 };
-use micro_visualizer::Visualizer;
+use micro_visualizer::{Visualizer, VisualizerInfo};
 use palette::LinSrgba;
 
 struct TestVisualizer;
@@ -21,7 +21,12 @@ impl Visualizer for TestVisualizer {
 		"test.flac".into()
 	}
 
-	fn draw(&mut self, ctx: &mut Context, frame_number: u64) -> anyhow::Result<()> {
+	fn draw(
+		&mut self,
+		ctx: &mut Context,
+		_vis_info: VisualizerInfo,
+		frame_number: u64,
+	) -> anyhow::Result<()> {
 		ctx.clear(LinSrgba::BLACK);
 		Mesh::rectangle(
 			ctx,

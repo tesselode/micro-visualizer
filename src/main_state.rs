@@ -22,7 +22,7 @@ use palette::LinSrgba;
 
 use crate::{
 	time::{frame_to_seconds, seconds_to_frames, seconds_to_frames_i64},
-	Visualizer,
+	Visualizer, VisualizerInfo,
 };
 
 const FINISHED_SEEK_DETECTION_THRESHOLD: Duration = Duration::from_millis(100);
@@ -159,6 +159,21 @@ impl MainState {
 		let delta_frames = seconds_to_frames_i64(delta, self.visualizer.frame_rate());
 		self.seek_by(delta_frames)
 	}
+
+	fn vis_info(&self) -> VisualizerInfo {
+		let current_frame = self.current_frame();
+		VisualizerInfo {
+			current_frame,
+			current_time: Duration::from_secs_f64(frame_to_seconds(
+				current_frame,
+				self.visualizer.frame_rate(),
+			)),
+			current_chapter_index: self
+				.visualizer
+				.chapters()
+				.and_then(|chapters| chapters.index_at_frame(current_frame)),
+		}
+	}
 }
 
 impl State<anyhow::Error> for MainState {
@@ -212,7 +227,7 @@ impl State<anyhow::Error> for MainState {
 			}
 		}
 
-		self.visualizer.update(ctx, delta_time)?;
+		self.visualizer.update(ctx, self.vis_info(), delta_time)?;
 
 		Ok(())
 	}
@@ -222,7 +237,7 @@ impl State<anyhow::Error> for MainState {
 		let current_frame = self.current_frame();
 		if current_frame != self.previous_frame {
 			let ctx = &mut self.canvas.render_to(ctx);
-			self.visualizer.draw(ctx, current_frame)?;
+			self.visualizer.draw(ctx, self.vis_info(), current_frame)?;
 			self.previous_frame = current_frame;
 		}
 		let max_horizontal_scale =
