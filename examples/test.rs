@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use egui::Ui;
 use micro::{
 	graphics::{mesh::Mesh, ColorConstants, DrawParams},
 	math::Rect,
@@ -19,6 +20,16 @@ impl TestVisualizer {
 impl Visualizer for TestVisualizer {
 	fn audio_path(&self) -> PathBuf {
 		"test.flac".into()
+	}
+
+	fn menu(
+		&mut self,
+		ctx: &mut Context,
+		ui: &mut Ui,
+		vis_info: VisualizerInfo,
+	) -> Result<(), anyhow::Error> {
+		ui.label("hello!");
+		Ok(())
 	}
 
 	fn draw(

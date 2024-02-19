@@ -178,12 +178,13 @@ impl MainState {
 
 impl State<anyhow::Error> for MainState {
 	fn ui(&mut self, ctx: &mut Context, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
-		self.render_main_menu(egui_ctx)?;
+		self.render_main_menu(ctx, egui_ctx)?;
 		self.render_rendering_window(ctx, egui_ctx)?;
+		self.visualizer.ui(ctx, egui_ctx, self.vis_info())?;
 		Ok(())
 	}
 
-	fn event(&mut self, _ctx: &mut Context, event: Event) -> Result<(), anyhow::Error> {
+	fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), anyhow::Error> {
 		if let Event::KeyPressed { key, .. } = event {
 			match key {
 				Scancode::Space => self.toggle_playback()?,
@@ -194,6 +195,9 @@ impl State<anyhow::Error> for MainState {
 				_ => {}
 			}
 		}
+
+		self.visualizer.event(ctx, self.vis_info(), event)?;
+
 		Ok(())
 	}
 

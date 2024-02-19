@@ -6,7 +6,11 @@ use crate::time::frame_to_seconds;
 use super::{MainState, Mode};
 
 impl MainState {
-	pub fn render_main_menu(&mut self, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
+	pub fn render_main_menu(
+		&mut self,
+		ctx: &mut Context,
+		egui_ctx: &egui::Context,
+	) -> Result<(), anyhow::Error> {
 		TopBottomPanel::bottom("main_menu")
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
 				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
@@ -24,6 +28,7 @@ impl MainState {
 							self.go_to_next_chapter()?;
 						}
 					}
+					self.visualizer.menu(ctx, ui, self.vis_info())?;
 					Ok(())
 				})
 				.inner

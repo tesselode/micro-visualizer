@@ -3,12 +3,13 @@ mod main_state;
 mod time;
 
 pub use chapters::*;
+use egui::Ui;
 
 use std::{path::PathBuf, time::Duration};
 
 use glam::UVec2;
 use main_state::MainState;
-use micro::{Context, ContextSettings, WindowMode};
+use micro::{Context, ContextSettings, Event, WindowMode};
 
 pub fn run<T: Visualizer>(
 	mut visualizer_constructor: impl FnMut(&mut Context) -> anyhow::Result<T>,
@@ -46,6 +47,33 @@ pub trait Visualizer: 'static {
 
 	fn chapters(&self) -> Option<&Chapters> {
 		None
+	}
+
+	fn ui(
+		&mut self,
+		ctx: &mut Context,
+		egui_ctx: &egui::Context,
+		vis_info: VisualizerInfo,
+	) -> Result<(), anyhow::Error> {
+		Ok(())
+	}
+
+	fn menu(
+		&mut self,
+		ctx: &mut Context,
+		ui: &mut Ui,
+		vis_info: VisualizerInfo,
+	) -> Result<(), anyhow::Error> {
+		Ok(())
+	}
+
+	fn event(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		event: Event,
+	) -> Result<(), anyhow::Error> {
+		Ok(())
 	}
 
 	fn update(
