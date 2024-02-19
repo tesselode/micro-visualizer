@@ -940,7 +940,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 [[package]]
 name = "micro"
 version = "0.1.0"
-source = "git+https://github.com/tesselode/micro?rev=51aa0ca#51aa0cac1a27245d7d52d65331aa04dfa20ea129"
+source = "git+https://github.com/tesselode/micro?rev=d8dc33a#d8dc33a9abc7af4e8184786387a173dc3a7fd528"
 dependencies = [
  "backtrace",
  "bytemuck",
@@ -955,7 +955,9 @@ dependencies = [
  "indexmap",
  "itertools",
  "lyon_tessellation",
+ "once_cell",
  "palette",
+ "regex-lite",
  "sdl2",
  "thiserror",
  "tracing",
@@ -1433,6 +1435,12 @@ dependencies = [
  "memchr",
  "regex-syntax 0.8.2",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30b661b2f27137bdbc16f00eda72866a92bb28af1753ffbd56744fb6e2e9cd8e"
 
 [[package]]
 name = "regex-syntax"
