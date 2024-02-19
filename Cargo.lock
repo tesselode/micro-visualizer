@@ -800,7 +800,7 @@ dependencies = [
 [[package]]
 name = "kira"
 version = "0.8.6"
-source = "git+https://github.com/tesselode/kira?rev=418a4b2#418a4b2570e69b9b87cc18ec40f801fe1a47453c"
+source = "git+https://github.com/tesselode/kira?rev=7e8d7ea#7e8d7ea02fa7036e371e1c959092cfcf70ced8cd"
 dependencies = [
  "atomic-arena",
  "cpal",
