@@ -68,7 +68,7 @@ impl MainState {
 				start_frame: 0,
 			},
 			num_frames,
-			previous_frame: 0,
+			previous_frame: u64::MAX,
 			canvas,
 			rendering_settings,
 			show_rendering_window: false,
