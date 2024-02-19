@@ -2,6 +2,8 @@ mod chapters;
 mod main_state;
 mod time;
 
+pub use chapters::*;
+
 use std::{path::PathBuf, time::Duration};
 
 use glam::UVec2;
@@ -20,8 +22,8 @@ pub trait Visualizer: 'static {
 		UVec2::new(3840, 2160)
 	}
 
-	fn chapters(&self) -> Vec<Chapter> {
-		vec![]
+	fn chapters(&self) -> Option<&Chapters> {
+		None
 	}
 
 	fn update(&mut self, ctx: &mut Context, delta_time: Duration) -> anyhow::Result<()> {
@@ -29,12 +31,6 @@ pub trait Visualizer: 'static {
 	}
 
 	fn draw(&mut self, ctx: &mut Context, frame_number: u64) -> anyhow::Result<()>;
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Chapter {
-	pub name: String,
-	pub start_frame: u64,
 }
 
 pub fn run<T: Visualizer>(

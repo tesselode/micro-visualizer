@@ -21,7 +21,6 @@ use micro::{
 use palette::LinSrgba;
 
 use crate::{
-	chapters::Chapters,
 	time::{frame_to_seconds, seconds_to_frames, seconds_to_frames_i64},
 	Visualizer,
 };
@@ -34,7 +33,6 @@ pub struct MainState {
 	mode: Mode,
 	num_frames: u64,
 	previous_frame: u64,
-	chapters: Option<Chapters>,
 	canvas: Canvas,
 	rendering_settings: RenderingSettings,
 	show_rendering_window: bool,
@@ -49,18 +47,12 @@ impl MainState {
 		)?;
 		let num_frames =
 			seconds_to_frames(sound_data.duration().as_secs_f64(), visualizer.frame_rate());
-		let chapters = visualizer.chapters();
-		let chapters = if visualizer.chapters().is_empty() {
-			None
-		} else {
-			Some(Chapters(chapters))
-		};
 		let canvas = Canvas::new(
 			ctx,
 			visualizer.video_resolution(),
 			CanvasSettings::default(),
 		);
-		let rendering_settings = if let Some(chapters) = &chapters {
+		let rendering_settings = if let Some(chapters) = visualizer.chapters() {
 			RenderingSettings {
 				start_chapter_index: 0,
 				end_chapter_index: chapters.len() - 1,
@@ -77,7 +69,6 @@ impl MainState {
 			},
 			num_frames,
 			previous_frame: 0,
-			chapters,
 			canvas,
 			rendering_settings,
 			show_rendering_window: false,

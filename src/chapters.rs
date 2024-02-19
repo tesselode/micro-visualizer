@@ -1,6 +1,10 @@
 use derive_more::{Index, IndexMut, IntoIterator};
 
-use crate::Chapter;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Chapter {
+	pub name: String,
+	pub start_frame: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Index, IndexMut, IntoIterator)]
 pub struct Chapters(pub Vec<Chapter>);
@@ -16,6 +20,11 @@ impl Chapters {
 
 	pub fn len(&self) -> usize {
 		self.0.len()
+	}
+
+	#[must_use]
+	pub fn is_empty(&self) -> bool {
+		self.len() == 0
 	}
 
 	pub fn index_at_frame(&self, frame: u64) -> Option<usize> {

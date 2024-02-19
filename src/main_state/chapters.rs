@@ -8,7 +8,7 @@ const BEGINNING_OF_CHAPTER_THRESHOLD: Duration = Duration::from_secs(2);
 
 impl MainState {
 	pub fn go_to_chapter(&mut self, chapter_index: usize) -> anyhow::Result<()> {
-		let Some(chapters) = &self.chapters else {
+		let Some(chapters) = self.visualizer.chapters() else {
 			return Ok(());
 		};
 		self.seek(chapters[chapter_index].start_frame)?;
@@ -16,7 +16,7 @@ impl MainState {
 	}
 
 	pub fn go_to_next_chapter(&mut self) -> anyhow::Result<()> {
-		let Some(chapters) = &self.chapters else {
+		let Some(chapters) = self.visualizer.chapters() else {
 			return Ok(());
 		};
 		let current_chapter_index = chapters
@@ -30,7 +30,7 @@ impl MainState {
 	}
 
 	pub fn go_to_previous_chapter(&mut self) -> anyhow::Result<()> {
-		let Some(chapters) = &self.chapters else {
+		let Some(chapters) = self.visualizer.chapters() else {
 			return Ok(());
 		};
 		let current_chapter_index = chapters

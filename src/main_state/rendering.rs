@@ -17,7 +17,7 @@ impl MainState {
 		else {
 			return Ok(());
 		};
-		let (start_frame, end_frame) = if let Some(chapters) = &self.chapters {
+		let (start_frame, end_frame) = if let Some(chapters) = self.visualizer.chapters() {
 			let start_frame = chapters[self.rendering_settings.start_chapter_index].start_frame;
 			let end_frame = chapters
 				.end_frame(self.rendering_settings.end_chapter_index)

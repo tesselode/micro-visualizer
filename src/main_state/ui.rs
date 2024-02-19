@@ -41,7 +41,7 @@ impl MainState {
 			.open(&mut self.show_rendering_window)
 			.show(egui_ctx, |ui| {
 				let mut rendering_started = false;
-				if let Some(chapters) = &self.chapters {
+				if let Some(chapters) = self.visualizer.chapters() {
 					ComboBox::new("start_chapter_index", "Start Chapter Index").show_index(
 						ui,
 						&mut self.rendering_settings.start_chapter_index,
@@ -82,7 +82,7 @@ impl MainState {
 
 	fn render_seekbar(&mut self, ui: &mut Ui) -> Result<(), anyhow::Error> {
 		let mut frame = self.current_frame();
-		let (start_frame, end_frame) = if let Some(chapters) = &self.chapters {
+		let (start_frame, end_frame) = if let Some(chapters) = self.visualizer.chapters() {
 			let current_chapter_index = chapters
 				.index_at_frame(self.current_frame())
 				.expect("no current chapter");
@@ -114,7 +114,7 @@ impl MainState {
 	}
 
 	fn render_chapter_combo_box(&mut self, ui: &mut Ui) -> anyhow::Result<()> {
-		let Some(chapters) = &self.chapters else {
+		let Some(chapters) = self.visualizer.chapters() else {
 			return Ok(());
 		};
 		let current_frame = self.current_frame();
