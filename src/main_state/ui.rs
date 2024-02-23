@@ -3,7 +3,7 @@ use micro::Context;
 
 use crate::time::frame_to_seconds;
 
-use super::{MainState, Mode};
+use super::{LiveResolution, MainState, Mode};
 
 impl MainState {
 	pub fn render_main_menu(
@@ -15,9 +15,6 @@ impl MainState {
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
 				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
 					self.render_play_pause_button(ui)?;
-					if ui.button("Render").clicked() {
-						self.show_rendering_window = true;
-					}
 					self.render_seekbar(ui)?;
 					self.render_chapter_combo_box(ui)?;
 					if !matches!(self.mode, Mode::Rendering { .. }) {
@@ -27,6 +24,19 @@ impl MainState {
 						if ui.button(">>").clicked() {
 							self.go_to_next_chapter()?;
 						}
+					}
+					if !matches!(self.mode, Mode::Rendering { .. }) {
+						let mut selected_resolution_index = self.live_resolution as usize;
+						ComboBox::new("resolution", "").show_index(
+							ui,
+							&mut selected_resolution_index,
+							LiveResolution::NUM_RESOLUTIONS,
+							|index| LiveResolution::from(index).label(),
+						);
+						self.live_resolution = LiveResolution::from(selected_resolution_index);
+					}
+					if ui.button("Render").clicked() {
+						self.show_rendering_window = true;
 					}
 					self.visualizer.menu(ctx, ui, self.vis_info())?;
 					Ok(())

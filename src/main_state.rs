@@ -33,6 +33,7 @@ pub struct MainState {
 	mode: Mode,
 	num_frames: u64,
 	canvas: Canvas,
+	live_resolution: LiveResolution,
 	rendering_settings: RenderingSettings,
 	show_rendering_window: bool,
 }
@@ -68,6 +69,7 @@ impl MainState {
 			},
 			num_frames,
 			canvas,
+			live_resolution: LiveResolution::Full,
 			rendering_settings,
 			show_rendering_window: false,
 		})
@@ -161,6 +163,7 @@ impl MainState {
 	fn vis_info(&self) -> VisualizerInfo {
 		let current_frame = self.current_frame();
 		VisualizerInfo {
+			resolution: self.current_resolution(),
 			current_frame,
 			current_time: Duration::from_secs_f64(frame_to_seconds(
 				current_frame,
@@ -170,6 +173,14 @@ impl MainState {
 				.visualizer
 				.chapters()
 				.and_then(|chapters| chapters.index_at_frame(current_frame)),
+		}
+	}
+
+	fn current_resolution(&self) -> glam::UVec2 {
+		if matches!(self.mode, Mode::Rendering { .. }) {
+			self.visualizer.video_resolution()
+		} else {
+			self.visualizer.video_resolution() / self.live_resolution.as_divisor()
 		}
 	}
 }
@@ -200,6 +211,10 @@ impl State<anyhow::Error> for MainState {
 	}
 
 	fn update(&mut self, ctx: &mut Context, delta_time: Duration) -> Result<(), anyhow::Error> {
+		if self.canvas.size() != self.current_resolution() {
+			self.canvas = Canvas::new(ctx, self.current_resolution(), CanvasSettings::default());
+		}
+
 		if let Mode::PlayingOrPaused {
 			sound,
 			in_progress_seek,
@@ -240,15 +255,13 @@ impl State<anyhow::Error> for MainState {
 			let ctx = &mut self.canvas.render_to(ctx);
 			self.visualizer.draw(ctx, self.vis_info())?;
 		}
-		let max_horizontal_scale =
-			ctx.window_size().x as f32 / self.visualizer.video_resolution().x as f32;
-		let max_vertical_scale =
-			ctx.window_size().y as f32 / self.visualizer.video_resolution().y as f32;
+		let max_horizontal_scale = ctx.window_size().x as f32 / self.canvas.size().x as f32;
+		let max_vertical_scale = ctx.window_size().y as f32 / self.canvas.size().y as f32;
 		let scale = max_horizontal_scale.min(max_vertical_scale);
 		self.canvas.draw(
 			ctx,
 			DrawParams::new()
-				.translated_2d(-self.visualizer.video_resolution().as_vec2() / 2.0)
+				.translated_2d(-self.canvas.size().as_vec2() / 2.0)
 				.scaled_2d(Vec2::splat(scale))
 				.translated_2d(ctx.window_size().as_vec2() / 2.0),
 		);
@@ -291,6 +304,44 @@ enum Mode {
 		canvas_read_buffer: Vec<u8>,
 		ffmpeg_process: Child,
 	},
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum LiveResolution {
+	Full,
+	Half,
+	Quarter,
+}
+
+impl LiveResolution {
+	const NUM_RESOLUTIONS: usize = 3;
+
+	fn as_divisor(self) -> u32 {
+		match self {
+			LiveResolution::Full => 1,
+			LiveResolution::Half => 2,
+			LiveResolution::Quarter => 4,
+		}
+	}
+
+	fn label(self) -> &'static str {
+		match self {
+			LiveResolution::Full => "Full",
+			LiveResolution::Half => "Half",
+			LiveResolution::Quarter => "Quarter",
+		}
+	}
+}
+
+impl From<usize> for LiveResolution {
+	fn from(value: usize) -> Self {
+		match value {
+			0 => Self::Full,
+			1 => Self::Half,
+			2 => Self::Quarter,
+			_ => panic!("invalid LiveResolution"),
+		}
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

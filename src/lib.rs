@@ -90,6 +90,7 @@ pub trait Visualizer: 'static {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VisualizerInfo {
+	pub resolution: UVec2,
 	pub current_frame: u64,
 	pub current_time: Duration,
 	pub current_chapter_index: Option<usize>,
