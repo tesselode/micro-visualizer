@@ -32,6 +32,7 @@ pub struct MainState {
 	audio_manager: AudioManager,
 	mode: Mode,
 	num_frames: u64,
+	previous_frame: u64,
 	canvas: Canvas,
 	live_resolution: LiveResolution,
 	rendering_settings: RenderingSettings,
@@ -68,6 +69,7 @@ impl MainState {
 				start_frame: 0,
 			},
 			num_frames,
+			previous_frame: u64::MAX,
 			canvas,
 			live_resolution: LiveResolution::Full,
 			rendering_settings,
@@ -251,9 +253,11 @@ impl State<anyhow::Error> for MainState {
 
 	fn draw(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
 		ctx.clear(LinSrgba::BLACK);
-		{
+		let current_frame = self.current_frame();
+		if current_frame != self.previous_frame {
 			let ctx = &mut self.canvas.render_to(ctx);
 			self.visualizer.draw(ctx, self.vis_info())?;
+			self.previous_frame = current_frame;
 		}
 		let max_horizontal_scale = ctx.window_size().x as f32 / self.canvas.size().x as f32;
 		let max_vertical_scale = ctx.window_size().y as f32 / self.canvas.size().y as f32;
