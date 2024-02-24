@@ -9,7 +9,7 @@ use std::{path::PathBuf, time::Duration};
 
 use glam::UVec2;
 use main_state::MainState;
-use micro::{Context, ContextSettings, Event, WindowMode};
+use micro::{graphics::Canvas, Context, ContextSettings, Event, WindowMode};
 
 pub fn run<T: Visualizer>(
 	mut visualizer_constructor: impl FnMut(&mut Context) -> anyhow::Result<T>,
@@ -85,7 +85,12 @@ pub trait Visualizer: 'static {
 		Ok(())
 	}
 
-	fn draw(&mut self, ctx: &mut Context, vis_info: VisualizerInfo) -> anyhow::Result<()>;
+	fn draw(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		main_canvas: &Canvas,
+	) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

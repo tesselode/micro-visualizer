@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use egui::Ui;
 use micro::{
-	graphics::{mesh::Mesh, ColorConstants, DrawParams},
+	graphics::{mesh::Mesh, Canvas, ColorConstants, DrawParams},
 	math::Rect,
 	Context,
 };
@@ -32,7 +32,13 @@ impl Visualizer for TestVisualizer {
 		Ok(())
 	}
 
-	fn draw(&mut self, ctx: &mut Context, vis_info: VisualizerInfo) -> anyhow::Result<()> {
+	fn draw(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		main_canvas: &Canvas,
+	) -> anyhow::Result<()> {
+		let ctx = &mut main_canvas.render_to(ctx);
 		ctx.clear(LinSrgba::BLACK);
 		Mesh::rectangle(
 			ctx,
