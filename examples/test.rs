@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use egui::Ui;
 use micro::{
+	clear,
 	graphics::{mesh::Mesh, Canvas, ColorConstants, DrawParams},
 	math::Rect,
-	Context,
 };
 use micro_visualizer::{Visualizer, VisualizerInfo};
 use palette::LinSrgba;
@@ -12,7 +12,7 @@ use palette::LinSrgba;
 struct TestVisualizer;
 
 impl TestVisualizer {
-	pub fn new(ctx: &mut Context) -> anyhow::Result<Self> {
+	pub fn new() -> anyhow::Result<Self> {
 		Ok(Self)
 	}
 }
@@ -22,29 +22,21 @@ impl Visualizer for TestVisualizer {
 		"test.flac".into()
 	}
 
-	fn menu(
-		&mut self,
-		ctx: &mut Context,
-		ui: &mut Ui,
-		vis_info: VisualizerInfo,
-	) -> Result<(), anyhow::Error> {
+	fn menu(&mut self, ui: &mut Ui, _vis_info: VisualizerInfo) -> Result<(), anyhow::Error> {
 		ui.label("hello!");
 		Ok(())
 	}
 
-	fn draw(
-		&mut self,
-		ctx: &mut Context,
-		vis_info: VisualizerInfo,
-		main_canvas: &Canvas,
-	) -> anyhow::Result<()> {
-		let ctx = &mut main_canvas.render_to(ctx);
-		ctx.clear(LinSrgba::BLACK);
-		Mesh::rectangle(
-			ctx,
-			Rect::from_xywh(50.0 + vis_info.current_frame as f32, 50.0, 100.0, 150.0),
-		)
-		.draw(ctx, DrawParams::new());
+	fn draw(&mut self, vis_info: VisualizerInfo, main_canvas: &Canvas) -> anyhow::Result<()> {
+		let _scope = main_canvas.render_to();
+		clear(LinSrgba::BLACK);
+		Mesh::rectangle(Rect::from_xywh(
+			50.0 + vis_info.current_frame as f32,
+			50.0,
+			100.0,
+			150.0,
+		))
+		.draw(DrawParams::new());
 		Ok(())
 	}
 }

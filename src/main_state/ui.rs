@@ -1,16 +1,11 @@
 use egui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui};
-use micro::Context;
 
 use crate::time::frame_to_seconds;
 
 use super::{LiveResolution, MainState, Mode};
 
 impl MainState {
-	pub fn render_main_menu(
-		&mut self,
-		ctx: &mut Context,
-		egui_ctx: &egui::Context,
-	) -> Result<(), anyhow::Error> {
+	pub fn render_main_menu(&mut self, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
 		TopBottomPanel::bottom("main_menu")
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
 				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
@@ -38,7 +33,7 @@ impl MainState {
 					if ui.button("Render").clicked() {
 						self.show_rendering_window = true;
 					}
-					self.visualizer.menu(ctx, ui, self.vis_info())?;
+					self.visualizer.menu(ui, self.vis_info())?;
 					Ok(())
 				})
 				.inner
@@ -47,11 +42,7 @@ impl MainState {
 		Ok(())
 	}
 
-	pub fn render_rendering_window(
-		&mut self,
-		ctx: &mut Context,
-		egui_ctx: &egui::Context,
-	) -> anyhow::Result<()> {
+	pub fn render_rendering_window(&mut self, egui_ctx: &egui::Context) -> anyhow::Result<()> {
 		let response = egui::Window::new("Rendering")
 			.open(&mut self.show_rendering_window)
 			.show(egui_ctx, |ui| {
@@ -79,7 +70,7 @@ impl MainState {
 			inner: Some(true), ..
 		}) = response
 		{
-			self.render(ctx)?;
+			self.render()?;
 		}
 		Ok(())
 	}

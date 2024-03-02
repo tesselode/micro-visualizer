@@ -1,7 +1,7 @@
 use std::process::{Command, Stdio};
 
 use kira::sound::streaming::{StreamingSoundData, StreamingSoundSettings};
-use micro::{graphics::SwapInterval, Context};
+use micro::{graphics::SwapInterval, set_swap_interval};
 use rfd::FileDialog;
 
 use crate::time::frame_to_seconds;
@@ -9,7 +9,7 @@ use crate::time::frame_to_seconds;
 use super::{MainState, Mode};
 
 impl MainState {
-	pub fn render(&mut self, ctx: &mut Context) -> anyhow::Result<()> {
+	pub fn render(&mut self) -> anyhow::Result<()> {
 		let Some(video_path) = FileDialog::new()
 			.set_directory(std::env::current_exe().unwrap())
 			.add_filter("mp4 video", &["mp4"])
@@ -70,11 +70,11 @@ impl MainState {
 			canvas_read_buffer,
 			ffmpeg_process,
 		};
-		ctx.set_swap_interval(SwapInterval::Immediate)?;
+		set_swap_interval(SwapInterval::Immediate)?;
 		Ok(())
 	}
 
-	pub fn stop_rendering(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
+	pub fn stop_rendering(&mut self) -> Result<(), anyhow::Error> {
 		self.mode = Mode::Stopped {
 			data: Some(StreamingSoundData::from_file(
 				self.visualizer.audio_path(),
@@ -82,7 +82,7 @@ impl MainState {
 			)?),
 			start_frame: 0,
 		};
-		ctx.set_swap_interval(SwapInterval::VSync)?;
+		set_swap_interval(SwapInterval::VSync)?;
 		Ok(())
 	}
 }

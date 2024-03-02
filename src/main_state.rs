@@ -14,9 +14,10 @@ use kira::{
 	tween::Tween,
 };
 use micro::{
+	clear,
 	graphics::{Canvas, CanvasSettings, ColorConstants, DrawParams},
 	input::Scancode,
-	Context, Event, State,
+	window_size, Event, State,
 };
 use palette::LinSrgba;
 
@@ -40,7 +41,7 @@ pub struct MainState {
 }
 
 impl MainState {
-	pub fn new(ctx: &mut Context, visualizer: Box<dyn Visualizer>) -> anyhow::Result<Self> {
+	pub fn new(visualizer: Box<dyn Visualizer>) -> anyhow::Result<Self> {
 		let audio_manager = AudioManager::new(AudioManagerSettings::default())?;
 		let sound_data = StreamingSoundData::from_file(
 			visualizer.audio_path(),
@@ -48,11 +49,7 @@ impl MainState {
 		)?;
 		let num_frames =
 			seconds_to_frames(sound_data.duration().as_secs_f64(), visualizer.frame_rate());
-		let canvas = Canvas::new(
-			ctx,
-			visualizer.video_resolution(),
-			CanvasSettings::default(),
-		);
+		let canvas = Canvas::new(visualizer.video_resolution(), CanvasSettings::default());
 		let rendering_settings = if let Some(chapters) = visualizer.chapters() {
 			RenderingSettings {
 				start_chapter_index: 0,
@@ -188,14 +185,14 @@ impl MainState {
 }
 
 impl State<anyhow::Error> for MainState {
-	fn ui(&mut self, ctx: &mut Context, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
-		self.render_main_menu(ctx, egui_ctx)?;
-		self.render_rendering_window(ctx, egui_ctx)?;
-		self.visualizer.ui(ctx, egui_ctx, self.vis_info())?;
+	fn ui(&mut self, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
+		self.render_main_menu(egui_ctx)?;
+		self.render_rendering_window(egui_ctx)?;
+		self.visualizer.ui(egui_ctx, self.vis_info())?;
 		Ok(())
 	}
 
-	fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), anyhow::Error> {
+	fn event(&mut self, event: Event) -> Result<(), anyhow::Error> {
 		if let Event::KeyPressed { key, .. } = event {
 			match key {
 				Scancode::Space => self.toggle_playback()?,
@@ -207,14 +204,14 @@ impl State<anyhow::Error> for MainState {
 			}
 		}
 
-		self.visualizer.event(ctx, self.vis_info(), event)?;
+		self.visualizer.event(self.vis_info(), event)?;
 
 		Ok(())
 	}
 
-	fn update(&mut self, ctx: &mut Context, delta_time: Duration) -> Result<(), anyhow::Error> {
+	fn update(&mut self, delta_time: Duration) -> Result<(), anyhow::Error> {
 		if self.canvas.size() != self.current_resolution() {
-			self.canvas = Canvas::new(ctx, self.current_resolution(), CanvasSettings::default());
+			self.canvas = Canvas::new(self.current_resolution(), CanvasSettings::default());
 		}
 
 		if let Mode::PlayingOrPaused {
@@ -246,27 +243,26 @@ impl State<anyhow::Error> for MainState {
 			}
 		}
 
-		self.visualizer.update(ctx, self.vis_info(), delta_time)?;
+		self.visualizer.update(self.vis_info(), delta_time)?;
 
 		Ok(())
 	}
 
-	fn draw(&mut self, ctx: &mut Context) -> Result<(), anyhow::Error> {
-		ctx.clear(LinSrgba::BLACK);
+	fn draw(&mut self) -> Result<(), anyhow::Error> {
+		clear(LinSrgba::BLACK);
 		let current_frame = self.current_frame();
 		if current_frame != self.previous_frame {
-			self.visualizer.draw(ctx, self.vis_info(), &self.canvas)?;
+			self.visualizer.draw(self.vis_info(), &self.canvas)?;
 			self.previous_frame = current_frame;
 		}
-		let max_horizontal_scale = ctx.window_size().x as f32 / self.canvas.size().x as f32;
-		let max_vertical_scale = ctx.window_size().y as f32 / self.canvas.size().y as f32;
+		let max_horizontal_scale = window_size().x as f32 / self.canvas.size().x as f32;
+		let max_vertical_scale = window_size().y as f32 / self.canvas.size().y as f32;
 		let scale = max_horizontal_scale.min(max_vertical_scale);
 		self.canvas.draw(
-			ctx,
 			DrawParams::new()
 				.translated_2d(-self.canvas.size().as_vec2() / 2.0)
 				.scaled_2d(Vec2::splat(scale))
-				.translated_2d(ctx.window_size().as_vec2() / 2.0),
+				.translated_2d(window_size().as_vec2() / 2.0),
 		);
 		if let Mode::Rendering {
 			end_frame,
@@ -275,15 +271,15 @@ impl State<anyhow::Error> for MainState {
 			ffmpeg_process,
 		} = &mut self.mode
 		{
-			self.canvas.read(ctx, canvas_read_buffer);
+			self.canvas.read(canvas_read_buffer);
 			let ffmpeg_stdin = ffmpeg_process.stdin.as_mut().unwrap();
 			let write_result = ffmpeg_stdin.write_all(canvas_read_buffer);
 			if write_result.is_err() {
-				self.stop_rendering(ctx)?;
+				self.stop_rendering()?;
 			} else {
 				*current_frame += 1;
 				if *current_frame > *end_frame {
-					self.stop_rendering(ctx)?;
+					self.stop_rendering()?;
 				}
 			}
 		}
