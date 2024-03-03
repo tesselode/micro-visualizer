@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use egui::Ui;
 use micro::{
 	clear,
-	graphics::{mesh::Mesh, Canvas, ColorConstants, DrawParams},
+	graphics::{mesh::Mesh, Canvas, ColorConstants},
 	math::Rect,
 	with_canvas,
 };
@@ -37,7 +37,7 @@ impl Visualizer for TestVisualizer {
 				100.0,
 				150.0,
 			))
-			.draw(DrawParams::new());
+			.draw();
 		});
 		Ok(())
 	}
