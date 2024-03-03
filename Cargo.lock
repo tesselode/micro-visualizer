@@ -1297,7 +1297,7 @@ dependencies = [
 [[package]]
 name = "micro"
 version = "0.1.0"
-source = "git+https://github.com/tesselode/micro?rev=4855494#48554941d864fd5a68aeb6c3c519199ec31b2815"
+source = "git+https://github.com/tesselode/micro?rev=6d4c77d#6d4c77de6d19ce028f3ded875dc9270ee3039403"
 dependencies = [
  "backtrace",
  "bytemuck",

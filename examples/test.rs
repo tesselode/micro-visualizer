@@ -5,6 +5,7 @@ use micro::{
 	clear,
 	graphics::{mesh::Mesh, Canvas, ColorConstants, DrawParams},
 	math::Rect,
+	with_canvas,
 };
 use micro_visualizer::{Visualizer, VisualizerInfo};
 use palette::LinSrgba;
@@ -28,15 +29,16 @@ impl Visualizer for TestVisualizer {
 	}
 
 	fn draw(&mut self, vis_info: VisualizerInfo, main_canvas: &Canvas) -> anyhow::Result<()> {
-		let _scope = main_canvas.render_to();
-		clear(LinSrgba::BLACK);
-		Mesh::rectangle(Rect::from_xywh(
-			50.0 + vis_info.current_frame as f32,
-			50.0,
-			100.0,
-			150.0,
-		))
-		.draw(DrawParams::new());
+		with_canvas!(main_canvas, {
+			clear(LinSrgba::BLACK);
+			Mesh::rectangle(Rect::from_xywh(
+				50.0 + vis_info.current_frame as f32,
+				50.0,
+				100.0,
+				150.0,
+			))
+			.draw(DrawParams::new());
+		});
 		Ok(())
 	}
 }
