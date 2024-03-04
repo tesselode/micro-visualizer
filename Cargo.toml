@@ -10,7 +10,7 @@ anyhow = "1.0.79"
 derive_more = "0.99.17"
 egui = "0.26.2"
 glam = "0.25.0"
-kira = { git = "https://github.com/tesselode/kira", rev = "7e8d7ea" }
+kira = { git = "https://github.com/tesselode/kira", rev = "88c82d7" }
 micro = { git = "https://github.com/tesselode/micro", rev = "9281e93" }
 palette = "0.7.4"
 rfd = "0.14.0"

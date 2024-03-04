@@ -1142,15 +1142,17 @@ dependencies = [
 [[package]]
 name = "kira"
 version = "0.8.6"
-source = "git+https://github.com/tesselode/kira?rev=7e8d7ea#7e8d7ea02fa7036e371e1c959092cfcf70ced8cd"
+source = "git+https://github.com/tesselode/kira?rev=88c82d7#88c82d729bf5d7f37ded138c29c8b94924d8db8d"
 dependencies = [
  "atomic-arena",
  "cpal",
  "glam",
  "mint",
+ "paste",
  "ringbuf",
  "send_wrapper",
  "symphonia",
+ "triple_buffer",
 ]
 
 [[package]]
@@ -1634,6 +1636,12 @@ dependencies = [
  "smallvec",
  "windows-targets 0.48.5",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
 
 [[package]]
 name = "percent-encoding"
@@ -2441,6 +2449,15 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "triple_buffer"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "316e1ab00252ce5980b8a70eb50f9818f47a20d341394c56ffab88e764b3caed"
+dependencies = [
+ "crossbeam-utils",
 ]
 
 [[package]]

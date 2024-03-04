@@ -1,4 +1,5 @@
 use egui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui};
+use kira::Volume;
 
 use crate::time::frame_to_seconds;
 
@@ -33,6 +34,11 @@ impl MainState {
 					if ui.button("Render").clicked() {
 						self.show_rendering_window = true;
 					}
+					let Volume::Decibels(decibels) = &mut self.volume else {
+						unreachable!()
+					};
+					ui.label("Volume");
+					ui.add(Slider::new(decibels, Volume::MIN_DECIBELS..=0.0));
 					self.visualizer.menu(ui, self.vis_info())?;
 					Ok(())
 				})

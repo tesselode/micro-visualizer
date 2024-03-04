@@ -12,6 +12,7 @@ use kira::{
 		FromFileError, PlaybackPosition, PlaybackState,
 	},
 	tween::Tween,
+	Volume,
 };
 use micro::{
 	clear,
@@ -38,6 +39,7 @@ pub struct MainState {
 	live_resolution: LiveResolution,
 	rendering_settings: RenderingSettings,
 	show_rendering_window: bool,
+	volume: Volume,
 }
 
 impl MainState {
@@ -71,6 +73,7 @@ impl MainState {
 			live_resolution: LiveResolution::Full,
 			rendering_settings,
 			show_rendering_window: false,
+			volume: Volume::Decibels(0.0),
 		})
 	}
 
@@ -109,7 +112,7 @@ impl MainState {
 				};
 			}
 			Mode::PlayingOrPaused { sound, .. } => {
-				sound.resume(Tween::default())?;
+				sound.resume(Tween::default());
 			}
 			Mode::Rendering { .. } => unreachable!("not supported in rendering mode"),
 		}
@@ -118,7 +121,7 @@ impl MainState {
 
 	fn pause(&mut self) -> anyhow::Result<()> {
 		if let Mode::PlayingOrPaused { sound, .. } = &mut self.mode {
-			sound.pause(Tween::default())?;
+			sound.pause(Tween::default());
 		}
 		Ok(())
 	}
@@ -141,7 +144,7 @@ impl MainState {
 				sound,
 				in_progress_seek,
 			} => {
-				sound.seek_to(frame_to_seconds(frame, self.visualizer.frame_rate()))?;
+				sound.seek_to(frame_to_seconds(frame, self.visualizer.frame_rate()));
 				*in_progress_seek = Some(frame);
 			}
 			Mode::Rendering { .. } => unreachable!("not supported in rendering mode"),
@@ -219,6 +222,7 @@ impl State<anyhow::Error> for MainState {
 			in_progress_seek,
 		} = &mut self.mode
 		{
+			sound.set_volume(self.volume, Tween::default());
 			if let Some(in_progress_seek_destination) = in_progress_seek {
 				let detection_threshold_frames = seconds_to_frames_i64(
 					FINISHED_SEEK_DETECTION_THRESHOLD.as_secs_f64(),
