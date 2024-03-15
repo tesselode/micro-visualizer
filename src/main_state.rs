@@ -263,10 +263,10 @@ impl State<anyhow::Error> for MainState {
 		let max_vertical_scale = window_size().y as f32 / self.canvas.size().y as f32;
 		let scale = max_horizontal_scale.min(max_vertical_scale);
 		self.canvas
-			.draw()
 			.translated_2d(-self.canvas.size().as_vec2() / 2.0)
 			.scaled_2d(Vec2::splat(scale))
-			.translated_2d(window_size().as_vec2() / 2.0);
+			.translated_2d(window_size().as_vec2() / 2.0)
+			.draw();
 		if let Mode::Rendering {
 			end_frame,
 			current_frame,

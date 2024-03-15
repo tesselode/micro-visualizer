@@ -5,7 +5,7 @@ use micro::{
 	clear,
 	graphics::{mesh::Mesh, Canvas, ColorConstants},
 	math::Rect,
-	with_canvas,
+	render_to_canvas,
 };
 use micro_visualizer::{Visualizer, VisualizerInfo};
 use palette::LinSrgba;
@@ -29,7 +29,7 @@ impl Visualizer for TestVisualizer {
 	}
 
 	fn draw(&mut self, vis_info: VisualizerInfo, main_canvas: &Canvas) -> anyhow::Result<()> {
-		with_canvas!(main_canvas, {
+		render_to_canvas!(main_canvas, {
 			clear(LinSrgba::BLACK);
 			Mesh::rectangle(Rect::from_xywh(
 				50.0 + vis_info.current_frame as f32,
