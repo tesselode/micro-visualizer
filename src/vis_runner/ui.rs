@@ -1,15 +1,22 @@
-use egui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui};
 use kira::Volume;
+use micro::{
+	ui::{ComboBox, InnerResponse, Slider, TopBottomPanel, Ui},
+	Context,
+};
 
 use crate::time::frame_to_seconds;
 
-use super::{LiveResolution, MainState, Mode};
+use super::{LiveResolution, Mode, VisRunner};
 
-impl MainState {
-	pub fn render_main_menu(&mut self, egui_ctx: &egui::Context) -> Result<(), anyhow::Error> {
+impl VisRunner {
+	pub fn render_main_menu(
+		&mut self,
+		ctx: &mut Context,
+		egui_ctx: &micro::ui::Context,
+	) -> Result<(), anyhow::Error> {
 		TopBottomPanel::bottom("main_menu")
 			.show(egui_ctx, |ui| -> anyhow::Result<()> {
-				egui::menu::bar(ui, |ui| -> anyhow::Result<()> {
+				micro::ui::menu::bar(ui, |ui| -> anyhow::Result<()> {
 					self.render_play_pause_button(ui)?;
 					self.render_seekbar(ui)?;
 					self.render_chapter_combo_box(ui)?;
@@ -39,7 +46,7 @@ impl MainState {
 					};
 					ui.label("Volume");
 					ui.add(Slider::new(decibels, Volume::MIN_DECIBELS..=0.0));
-					self.visualizer.menu(ui, self.vis_info())?;
+					self.visualizer.menu(ctx, ui, self.vis_info())?;
 					Ok(())
 				})
 				.inner
@@ -48,8 +55,12 @@ impl MainState {
 		Ok(())
 	}
 
-	pub fn render_rendering_window(&mut self, egui_ctx: &egui::Context) -> anyhow::Result<()> {
-		let response = egui::Window::new("Rendering")
+	pub fn render_rendering_window(
+		&mut self,
+		ctx: &mut Context,
+		egui_ctx: &micro::ui::Context,
+	) -> anyhow::Result<()> {
+		let response = micro::ui::Window::new("Rendering")
 			.open(&mut self.show_rendering_window)
 			.show(egui_ctx, |ui| {
 				let mut rendering_started = false;
@@ -76,7 +87,7 @@ impl MainState {
 			inner: Some(true), ..
 		}) = response
 		{
-			self.render()?;
+			self.render(ctx)?;
 		}
 		Ok(())
 	}
@@ -119,7 +130,7 @@ impl MainState {
 				)
 			}),
 		);
-		if slider_response.drag_released() && !matches!(self.mode, Mode::Rendering { .. }) {
+		if slider_response.drag_stopped() && !matches!(self.mode, Mode::Rendering { .. }) {
 			self.seek(frame)?;
 		};
 		Ok(())

@@ -7,12 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.79"
-derive_more = "0.99.17"
-egui = "0.26.2"
-glam = "0.25.0"
-kira = { git = "https://github.com/tesselode/kira", rev = "88c82d7" }
-micro = { git = "https://github.com/tesselode/micro", rev = "98c39d4" }
-palette = "0.7.4"
+derive_more = { version = "1.0.0", features = ["index", "index_mut", "into_iterator"] }
+kira = "0.9.4"
+micro = { git = "https://github.com/tesselode/micro", rev = "0a1114d" }
 rfd = "0.14.0"
 
 [features]

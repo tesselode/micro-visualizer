@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use crate::time::frame_to_seconds;
 
-use super::MainState;
+use super::VisRunner;
 
 const BEGINNING_OF_CHAPTER_THRESHOLD: Duration = Duration::from_secs(2);
 
-impl MainState {
+impl VisRunner {
 	pub fn go_to_chapter(&mut self, chapter_index: usize) -> anyhow::Result<()> {
 		let Some(chapters) = self.visualizer.chapters() else {
 			return Ok(());

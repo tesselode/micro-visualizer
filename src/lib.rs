@@ -1,17 +1,17 @@
 mod chapters;
-mod main_state;
 mod time;
+mod vis_runner;
 
 pub use chapters::*;
-use egui::Ui;
 
 use std::{path::PathBuf, time::Duration};
 
-use glam::UVec2;
-use main_state::MainState;
-use micro::{graphics::Canvas, ContextSettings, Event, WindowMode};
+use micro::{graphics::Canvas, math::UVec2, ui::Ui, Context, ContextSettings, Event, WindowMode};
+use vis_runner::VisRunner;
 
-pub fn run<T: Visualizer>(mut visualizer_constructor: impl FnMut() -> anyhow::Result<T>) {
+pub fn run<T: Visualizer>(
+	mut visualizer_constructor: impl FnMut(&mut Context) -> anyhow::Result<T>,
+) {
 	micro::run(
 		ContextSettings {
 			window_title: "Micro Visualizer".into(),
@@ -19,14 +19,11 @@ pub fn run<T: Visualizer>(mut visualizer_constructor: impl FnMut() -> anyhow::Re
 				size: UVec2::new(1280, 720),
 			},
 			resizable: true,
-			qualifier: "com",
-			organization_name: "tesselode",
-			app_name: "micro_visualizer",
 			..Default::default()
 		},
-		|| {
-			let visualizer = Box::new(visualizer_constructor()?);
-			MainState::new(visualizer)
+		|ctx| {
+			let visualizer = Box::new(visualizer_constructor(ctx)?);
+			VisRunner::new(ctx, visualizer)
 		},
 	)
 }
@@ -49,25 +46,46 @@ pub trait Visualizer: 'static {
 
 	fn ui(
 		&mut self,
-		egui_ctx: &egui::Context,
+		ctx: &mut Context,
+		egui_ctx: &micro::ui::Context,
 		vis_info: VisualizerInfo,
 	) -> Result<(), anyhow::Error> {
 		Ok(())
 	}
 
-	fn menu(&mut self, ui: &mut Ui, vis_info: VisualizerInfo) -> Result<(), anyhow::Error> {
+	fn menu(
+		&mut self,
+		ctx: &mut Context,
+		ui: &mut Ui,
+		vis_info: VisualizerInfo,
+	) -> Result<(), anyhow::Error> {
 		Ok(())
 	}
 
-	fn event(&mut self, vis_info: VisualizerInfo, event: Event) -> Result<(), anyhow::Error> {
+	fn event(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		event: Event,
+	) -> Result<(), anyhow::Error> {
 		Ok(())
 	}
 
-	fn update(&mut self, vis_info: VisualizerInfo, delta_time: Duration) -> anyhow::Result<()> {
+	fn update(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		delta_time: Duration,
+	) -> anyhow::Result<()> {
 		Ok(())
 	}
 
-	fn draw(&mut self, vis_info: VisualizerInfo, main_canvas: &Canvas) -> anyhow::Result<()>;
+	fn draw(
+		&mut self,
+		ctx: &mut Context,
+		vis_info: VisualizerInfo,
+		main_canvas: &Canvas,
+	) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
