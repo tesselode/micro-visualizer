@@ -22,7 +22,7 @@ use micro::{
 };
 
 use crate::{
-	time::{frame_to_seconds, seconds_to_frames, seconds_to_frames_i64},
+	conversions::{frame_to_seconds, seconds_to_frames, seconds_to_frames_i64},
 	Visualizer, VisualizerInfo,
 };
 

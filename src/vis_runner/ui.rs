@@ -4,7 +4,7 @@ use micro::{
 	Context,
 };
 
-use crate::time::frame_to_seconds;
+use crate::conversions::frame_to_seconds;
 
 use super::{LiveResolution, Mode, VisRunner};
 

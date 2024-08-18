@@ -1,12 +1,13 @@
 mod chapters;
-mod time;
+mod conversions;
 mod vis_runner;
 
 pub use chapters::*;
+pub use micro::*;
 
 use std::{path::PathBuf, time::Duration};
 
-use micro::{graphics::Canvas, math::UVec2, ui::Ui, Context, ContextSettings, Event, WindowMode};
+use micro::{graphics::Canvas, math::UVec2, ui::Ui};
 use vis_runner::VisRunner;
 
 pub fn run<T: Visualizer>(

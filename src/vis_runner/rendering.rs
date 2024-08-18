@@ -4,7 +4,7 @@ use kira::sound::streaming::StreamingSoundData;
 use micro::{graphics::SwapInterval, Context};
 use rfd::FileDialog;
 
-use crate::time::frame_to_seconds;
+use crate::conversions::frame_to_seconds;
 
 use super::{Mode, VisRunner};
 

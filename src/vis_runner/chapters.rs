@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::time::frame_to_seconds;
+use crate::conversions::frame_to_seconds;
 
 use super::VisRunner;
 
